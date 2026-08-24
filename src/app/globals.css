@@ -7,3 +7,12 @@
 @media(max-width:900px){.site-footer{padding-left:max(15px,env(safe-area-inset-left,0px));padding-right:max(15px,env(safe-area-inset-right,0px))}.legal-topbar{padding:0 18px}.legal-main{padding:28px 15px}.legal-card{border-radius:18px}}
 @media(max-width:560px){.site-footer{align-items:flex-start;flex-direction:column;gap:12px}.legal-topbar{height:66px}.legal-back{padding:8px 11px}.legal-card{padding:25px 20px}.legal-title{padding-bottom:24px}.legal-title h1{font-size:clamp(1.9rem,9vw,2.25rem)}.legal-copy section{padding-top:25px}}
 @media(prefers-color-scheme:dark){.legal-card{box-shadow:0 15px 45px rgba(0,0,0,.2)}.legal-config-warning{border-color:#755b2a;background:#2e2618;color:#f4d897}}
+
+/* Keep app chrome clear of iOS Safari's status bar and home indicator. */
+.app-layout>.app-shell{flex:0 0 auto;min-height:100vh;min-height:100dvh}
+.site-footer{flex:0 0 auto}
+.legal-topbar{height:calc(76px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);padding-right:max(28px,env(safe-area-inset-right,0px));padding-left:max(28px,env(safe-area-inset-left,0px))}
+.drawer{height:100vh;height:100dvh;padding-top:max(26px,calc(env(safe-area-inset-top,0px) + 16px));padding-right:max(26px,env(safe-area-inset-right,0px));padding-bottom:max(26px,env(safe-area-inset-bottom,0px));padding-left:max(26px,env(safe-area-inset-left,0px))}
+.dialog-overlay{padding-top:max(20px,calc(env(safe-area-inset-top,0px) + 12px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-bottom:max(20px,calc(env(safe-area-inset-bottom,0px) + 12px));padding-left:max(20px,env(safe-area-inset-left,0px))}
+@media(max-width:900px){.legal-topbar{padding-right:max(18px,env(safe-area-inset-right,0px));padding-left:max(18px,env(safe-area-inset-left,0px))}}
+@media(max-width:560px){.legal-topbar{height:calc(66px + env(safe-area-inset-top,0px))}}
