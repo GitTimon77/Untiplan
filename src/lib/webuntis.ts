@@ -1,9 +1,10 @@
 import "server-only";
 import type { Holiday, Lesson, TimeGrid } from "./types";
+import { normalizeWebUntisServer } from "./schools";
 export type LoginInput = { server: string; school: string; username: string; password: string };
 type AuthResult = { sessionId: string; personId: number; personType: number; klasseId?: number; displayName?: string };
 type RpcResponse<T> = { result?: T; error?: { code: number; message: string; data?: unknown } };
-function normalizeServer(server: string) { const raw = server.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, ""); if (!/^[a-z0-9.-]+(?::\d+)?$/i.test(raw) || raw.includes("..")) throw new Error("Ungültiger WebUntis-Server."); return `https://${raw}`; }
+function normalizeServer(server: string) { return `https://${normalizeWebUntisServer(server)}`; }
 class WebUntisClient {
   private sessionId?: string; private requestId = 0;
   constructor(private input: LoginInput) {}

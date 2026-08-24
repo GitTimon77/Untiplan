@@ -5,6 +5,7 @@ Untiplan ist eine eigenständige Next.js-WebApp/PWA für WebUntis. Der Browser s
 ## Funktionen
 
 - sichere Anmeldung über `authenticate` und serverseitige WebUntis-Aufrufe
+- Schulsuche nach Name, Ort oder Adresse mit automatischer Übernahme von Server und Login-Kürzel
 - zufällige, `HttpOnly`-/`SameSite`-geschützte App-Sitzung
 - AES-256-GCM-verschlüsselte WebUntis-Zugangsdaten im persistenten Server-Volume
 - Wochen- und Tagesstundenplan, Unterrichtsdetails und Ferieninformationen
