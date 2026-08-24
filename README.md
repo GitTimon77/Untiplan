@@ -11,7 +11,7 @@ Untiplan ist eine eigenständige Next.js-WebApp/PWA für WebUntis. Der Browser s
 - Wochen- und Tagesstundenplan, Unterrichtsdetails und Ferieninformationen
 - Kennzeichnung von Ausfall, Vertretung, unregelmäßigem Unterricht und Veranstaltungen
 - automatische Kursliste aus Fach plus ursprünglicher Lehrkraft
-- dauerhaft gespeicherte, pro Sitzung getrennte Kursfilter
+- dauerhaft im jeweiligen Browser gespeicherte Kursfilter
 - responsive Oberfläche, Dark Mode, Web-App-Manifest und Service Worker
 - Docker Compose, Healthcheck, optionaler Cloudflare-Tunnel und automatisches GitHub-Deployment
 
@@ -57,7 +57,7 @@ docker compose up -d --wait --wait-timeout 180 app
 docker compose ps
 ```
 
-Der Container lauscht intern auf Port 3000 und wird standardmäßig nur unter `127.0.0.1:3002` veröffentlicht. Bind-Adresse und Host-Port lassen sich mit `APP_BIND_ADDRESS` und `APP_PORT` in `.env` ändern. Für öffentlichen Zugriff wird ein Reverse Proxy oder der optionale Cloudflare-Tunnel benötigt. Die Sitzungs- und Filterdaten liegen dauerhaft im Volume `untiplan_data`.
+Der Container lauscht intern auf Port 3000 und wird standardmäßig nur unter `127.0.0.1:3002` veröffentlicht. Bind-Adresse und Host-Port lassen sich mit `APP_BIND_ADDRESS` und `APP_PORT` in `.env` ändern. Für öffentlichen Zugriff wird ein Reverse Proxy oder der optionale Cloudflare-Tunnel benötigt. Die Sitzungsdaten liegen dauerhaft im Volume `untiplan_data`; Kursfilter verbleiben im jeweiligen Browser.
 
 ## Cloudflare Tunnel
 
@@ -85,4 +85,4 @@ Das Healthcheck-Ziel ist `/api/health`. Eine Änderung von `SESSION_SECRET` mach
 
 ## Sicherheitsgrenzen
 
-Der Dateispeicher ist für eine einzelne App-Instanz gedacht. Für mehrere parallele Replikate sollte er durch PostgreSQL oder Redis mit zentralem Session- und Filterstore ersetzt werden. Die Zieladresse akzeptiert ausschließlich WebUntis-Hostnamen und verwendet HTTPS. Ubuntu, Docker und `cloudflared` sollten regelmäßig aktualisiert werden. Für einen begrenzten Nutzerkreis empfiehlt sich zusätzlich Cloudflare Access.
+Der Dateispeicher ist für eine einzelne App-Instanz gedacht. Für mehrere parallele Replikate sollte er durch PostgreSQL oder Redis mit zentralem Session-Speicher ersetzt werden. Die Zieladresse akzeptiert ausschließlich WebUntis-Hostnamen und verwendet HTTPS. Ubuntu, Docker und `cloudflared` sollten regelmäßig aktualisiert werden. Für einen begrenzten Nutzerkreis empfiehlt sich zusätzlich Cloudflare Access.

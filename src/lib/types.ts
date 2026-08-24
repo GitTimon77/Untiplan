@@ -3,4 +3,4 @@ export type Lesson = { id: number; date: number; startTime: number; endTime: num
 export type Course = { key: string; subjectId: number; teacherId: number; subject: string; teacher: string };
 export type Holiday = { id: number; startDate: number; endDate: number; name: string; longName?: string };
 export type TimeGrid = { day: number; timeUnits: Array<{ startTime: number; endTime: number }> };
-export type TimetablePayload = { lessons: Lesson[]; courses: Course[]; selectedCourseKeys: string[]; filterEnabled: boolean; holidays: Holiday[]; timeGrid: TimeGrid[]; schoolYear?: string; latestImportTime?: number; range: { startDate: number; endDate: number } };
+export type TimetablePayload = { lessons: Lesson[]; courses: Course[]; holidays: Holiday[]; timeGrid: TimeGrid[]; schoolYear?: string; latestImportTime?: number; range: { startDate: number; endDate: number } };
