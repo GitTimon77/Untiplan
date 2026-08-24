@@ -78,6 +78,41 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Cloudflare Access prüfen
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          : "${SERVER_HOST:?SERVER_HOST fehlt}"
+          : "${CF_ACCESS_CLIENT_ID:?CF_ACCESS_CLIENT_ID fehlt}"
+          : "${CF_ACCESS_CLIENT_SECRET:?CF_ACCESS_CLIENT_SECRET fehlt}"
+
+          identity_file="$RUNNER_TEMP/cloudflare-access-identity.json"
+          if ! access_status="$(
+            curl --silent --show-error \
+              --output "$identity_file" \
+              --write-out '%{http_code}' \
+              --header "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+              --header "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+              "https://$SERVER_HOST/cdn-cgi/access/get-identity"
+          )"; then
+            echo "::error::Cloudflare Access konnte nicht erreicht werden."
+            exit 1
+          fi
+
+          if [ "$access_status" != "200" ]; then
+            echo "::error::Cloudflare Access hat den Service Token abgelehnt (HTTP $access_status)."
+            exit 1
+          fi
+
+          if ! jq --exit-status '.service_token_status == true' "$identity_file" >/dev/null; then
+            echo "::error::Cloudflare Access hat keine gültige Service-Token-Identität bestätigt."
+            exit 1
+          fi
+
+          echo "Cloudflare Access hat den Service Token akzeptiert."
+
       - name: Getesteten Commit deployen
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
