@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, KeyboardEvent, useEffect, useId, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SchoolSearchResult } from "@/lib/schools";
 
@@ -9,6 +9,7 @@ type SearchResponse = { schools?: SchoolSearchResult[]; error?: string };
 export function LoginForm() {
   const router = useRouter();
   const listboxId = useId();
+  const searchFieldRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"search" | "manual">("search");
@@ -58,6 +59,16 @@ export function LoginForm() {
       controller.abort();
     };
   }, [mode, query, selectedSchool]);
+
+  useEffect(() => {
+    function closeResultsOnOutsidePress(event: PointerEvent) {
+      const target = event.target;
+      if (target instanceof Node && !searchFieldRef.current?.contains(target)) setListOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeResultsOnOutsidePress);
+    return () => document.removeEventListener("pointerdown", closeResultsOnOutsidePress);
+  }, []);
 
   function selectSchool(school: SchoolSearchResult) {
     setSelectedSchool(school);
@@ -119,9 +130,13 @@ export function LoginForm() {
     <form className="login-form" onSubmit={submit}>
       {mode === "search" ? (
         <div
+          ref={searchFieldRef}
           className="school-search-field"
           onBlur={event => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setListOpen(false);
+            const searchField = event.currentTarget;
+            window.setTimeout(() => {
+              if (!searchField.contains(document.activeElement)) setListOpen(false);
+            }, 0);
           }}
         >
           <label htmlFor="school-search">Schule suchen</label>
