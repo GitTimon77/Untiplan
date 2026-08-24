@@ -1,2 +1,2 @@
 import type { MetadataRoute } from "next";
-export default function manifest(): MetadataRoute.Manifest { return { name: "Untiplan", short_name: "Untiplan", description: "Persönlicher Stundenplan mit Kursfiltern", start_url: "/", display: "standalone", background_color: "#f5f7fb", theme_color: "#3457d5", icons: [{ src: "/untiplan-logo.png", sizes: "1254x1254", type: "image/png", purpose: "any" }] }; }
+export default function manifest(): MetadataRoute.Manifest { return { name: "Untiplan", short_name: "Untiplan", description: "Persönlicher Stundenplan mit Kursfiltern", start_url: "/", display: "standalone", background_color: "#f5f7fb", theme_color: "#3457d5", icons: [{ src: "/untiplan-logo.png?v=2", sizes: "1254x1254", type: "image/png", purpose: "any" }] }; }
