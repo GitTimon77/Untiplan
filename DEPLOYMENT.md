@@ -175,6 +175,7 @@ SESSION_SECRET=HIER_DEN_GENERIERTEN_WERT_EINTRAGEN
 SESSION_TTL_DAYS=14
 DATA_DIR=./data
 WEBUNTIS_CLIENT=Untiplan
+APP_PORT=3002
 CLOUDFLARE_TUNNEL_TOKEN=
 ```
 
@@ -202,7 +203,7 @@ docker compose config --quiet
 docker compose build --pull app
 docker compose up -d --wait --wait-timeout 180 app
 docker compose ps
-curl --fail http://127.0.0.1:3000/api/health
+curl --fail http://127.0.0.1:3002/api/health
 ```
 
 Eine erfolgreiche Antwort des letzten Befehls enthält `"status":"ok"`.
@@ -215,7 +216,7 @@ docker compose logs -f app
 docker inspect --format='{{.State.Health.Status}}' untiplan-app-1
 ```
 
-Die Portbindung `127.0.0.1:3000:3000` ist absichtlich nur lokal erreichbar. Sie öffnet Port 3000 nicht direkt zum Internet.
+Die Portbindung `127.0.0.1:3002:3000` ist absichtlich nur lokal erreichbar. Port 3002 ist der Host-Port; Port 3000 bleibt der interne Container-Port. Mit `APP_PORT` in `.env` kann der Host-Port geändert werden, ohne Dockerfile oder Compose-Datei anzupassen.
 
 ## 6. Optional: Cloudflare-Tunnel aktivieren
 
@@ -226,7 +227,7 @@ Es gibt zwei unterstützte Varianten.
 Der Cloudflare-Ingress zeigt auf:
 
 ```text
-http://localhost:3000
+http://localhost:3002
 ```
 
 ### Tunnel als Compose-Dienst
@@ -375,7 +376,7 @@ Auf GitHub müssen die Jobs `Qualität prüfen` und `Auf Produktionsserver deplo
 cd /opt/untiplan
 git rev-parse HEAD
 docker compose ps
-curl --fail http://127.0.0.1:3000/api/health
+curl --fail http://127.0.0.1:3002/api/health
 ```
 
 Der erste Befehl sollte denselben Commit anzeigen wie der erfolgreiche GitHub-Actions-Lauf.
@@ -417,7 +418,7 @@ Der erste Befehl sollte denselben Commit anzeigen wie der erfolgreiche GitHub-Ac
 cd /opt/untiplan
 docker compose ps
 docker compose logs --tail=200 app
-curl -v http://127.0.0.1:3000/api/health
+curl -v http://127.0.0.1:3002/api/health
 ```
 
 ### App ist lokal erreichbar, aber nicht über die Domain
@@ -455,7 +456,7 @@ Anschließend starten und prüfen:
 
 ```bash
 docker compose up -d --wait --wait-timeout 180 app
-curl --fail http://127.0.0.1:3000/api/health
+curl --fail http://127.0.0.1:3002/api/health
 ```
 
 Das alte Volume erst nach erfolgreicher Kontrolle und einem Backup entfernen. Niemals `docker compose down -v` verwenden, wenn die gespeicherten Sitzungen erhalten bleiben sollen.
