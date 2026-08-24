@@ -90,14 +90,11 @@ jobs:
         run: |
           : "${TUNNEL_SERVICE_TOKEN_ID:?CF_ACCESS_CLIENT_ID fehlt}"
           : "${TUNNEL_SERVICE_TOKEN_SECRET:?CF_ACCESS_CLIENT_SECRET fehlt}"
-          cloudflared_debug_log="$RUNNER_TEMP/cloudflared-debug.log"
-
-          set +e
           ssh \
             -i ~/.ssh/id_ed25519 \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
-            -o "ProxyCommand=$CLOUDFLARED_BIN access ssh --hostname %h --log-level debug --logfile $cloudflared_debug_log" \
+            -o "ProxyCommand=$CLOUDFLARED_BIN access ssh --hostname %h" \
             -p "$SERVER_PORT" \
             "$SERVER_USER@$SERVER_HOST" \
             "DEPLOY_SHA='$DEPLOY_SHA' bash -se" <<'REMOTE'
@@ -134,21 +131,3 @@ jobs:
           echo "Rollback erfolgreich. Das Deployment bleibt als fehlgeschlagen markiert."
           exit 1
           REMOTE
-          ssh_status=$?
-          set -e
-
-          if [ "$ssh_status" -ne 0 ] && [ -f "$cloudflared_debug_log" ]; then
-            handshake_status="$(
-              grep --text --only-matching --extended-regexp \
-                'HTTP/[0-9.]+ [0-9]{3} [A-Za-z ]+' \
-                "$cloudflared_debug_log" | tail --lines=1 || true
-            )"
-
-            if [ -n "$handshake_status" ]; then
-              echo "::error::Cloudflare WebSocket-Handshake: $handshake_status"
-            else
-              echo "::error::Cloudflare hat keinen auswertbaren WebSocket-Status geliefert."
-            fi
-          fi
-
-          exit "$ssh_status"

@@ -291,6 +291,8 @@ In Cloudflare Zero Trust:
 4. Als Service `SSH` und als Ziel `localhost:22` eintragen.
 5. Speichern und prüfen, dass der Tunnel weiterhin `Healthy` ist.
 
+`localhost:22` gilt nur, wenn `cloudflared` direkt auf dem Ubuntu-Host läuft. Läuft der Tunnel selbst in einem Docker-Container, bezeichnet `localhost` diesen Container. In diesem Fall als SSH-Ziel eine vom Container erreichbare lokale IP-Adresse des Ubuntu-Servers mit Port `22` verwenden, beispielsweise `192.168.1.20:22`.
+
 Danach eine Access-Anwendung für denselben Hostnamen erstellen und einen Service-Token zulassen:
 
 1. `Access controls` → `Applications` öffnen.
@@ -426,6 +428,7 @@ Der erste Befehl sollte denselben Commit anzeigen wie der erfolgreiche GitHub-Ac
 - Die Access-Richtlinie verwendet nicht die Aktion `Service Auth`.
 - Der Service-Token wurde nicht unter `Include` ausgewählt.
 - Der Published Hostname zeigt nicht als `SSH`-Dienst auf `localhost:22`.
+- Wenn `cloudflared` als Docker-Container läuft, zeigt `localhost:22` in den Container statt auf den Ubuntu-Host. Dann eine vom Container erreichbare lokale Server-IP mit Port `22` verwenden.
 
 ### `Repository not found` oder Fehler bei `git fetch`
 
