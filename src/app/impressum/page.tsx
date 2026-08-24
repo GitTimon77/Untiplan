@@ -13,7 +13,6 @@ export default function ImpressumPage() {
   const legal = getLegalConfig();
   const { operator } = legal;
   const emailConfigured = !operator.email.startsWith("[");
-  const phoneConfigured = !operator.phone.startsWith("[");
 
   return (
     <LegalShell
@@ -21,13 +20,6 @@ export default function ImpressumPage() {
       title="Impressum"
       intro="Anbieterkennzeichnung nach § 5 Digitale-Dienste-Gesetz (DDG)."
     >
-      {legal.missingFields.length > 0 && (
-        <aside className="legal-config-warning" role="alert">
-          <strong>Betreiberangaben noch unvollständig</strong>
-          <p>Vor der Veröffentlichung müssen die mit eckigen Klammern markierten Angaben in der Server-Konfiguration ergänzt werden.</p>
-        </aside>
-      )}
-
       <section>
         <h2>Diensteanbieter</h2>
         <address>
@@ -48,8 +40,7 @@ export default function ImpressumPage() {
       <section>
         <h2>Kontakt</h2>
         <p>
-          E-Mail: {emailConfigured ? <a href={`mailto:${operator.email}`}>{operator.email}</a> : operator.email}<br />
-          Telefon: {phoneConfigured ? <a href={`tel:${operator.phone.replace(/[^+\d]/g, "")}`}>{operator.phone}</a> : operator.phone}
+          E-Mail: {emailConfigured ? <a href={`mailto:${operator.email}`}>{operator.email}</a> : operator.email}
         </p>
       </section>
 
@@ -75,4 +66,3 @@ export default function ImpressumPage() {
     </LegalShell>
   );
 }
-

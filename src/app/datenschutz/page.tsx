@@ -20,13 +20,6 @@ export default function DatenschutzPage() {
       title="Datenschutzerklärung"
       intro="Hier erfährst du verständlich, welche Daten Untiplan verarbeitet und warum. Stand: 25. August 2026."
     >
-      {legal.missingFields.length > 0 && (
-        <aside className="legal-config-warning" role="alert">
-          <strong>Kontaktdaten noch unvollständig</strong>
-          <p>Vor der Veröffentlichung müssen die mit eckigen Klammern markierten Angaben in der Server-Konfiguration ergänzt werden.</p>
-        </aside>
-      )}
-
       <section>
         <h2>1. Verantwortlicher</h2>
         <address>
@@ -116,4 +109,3 @@ export default function DatenschutzPage() {
     </LegalShell>
   );
 }
-

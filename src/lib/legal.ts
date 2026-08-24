@@ -6,7 +6,6 @@ const placeholders = {
   postalCode: "[Postleitzahl]",
   city: "[Ort]",
   email: "[E-Mail-Adresse]",
-  phone: "[Telefonnummer]",
 };
 
 function value(name: string, fallback = "") {
@@ -27,18 +26,12 @@ export function getLegalConfig() {
     city: value("LEGAL_CITY", placeholders.city),
     country: value("LEGAL_COUNTRY", "Deutschland"),
     email: value("LEGAL_EMAIL", placeholders.email),
-    phone: value("LEGAL_PHONE", placeholders.phone),
   };
-
-  const missingFields = Object.entries(operator)
-    .filter(([, fieldValue]) => fieldValue.startsWith("["))
-    .map(([field]) => field);
 
   const configuredSessionDays = Number(process.env.SESSION_TTL_DAYS || 14);
 
   return {
     operator,
-    missingFields,
     representative: value("LEGAL_REPRESENTATIVE"),
     register: value("LEGAL_REGISTER"),
     registerNumber: value("LEGAL_REGISTER_NUMBER"),
@@ -51,4 +44,3 @@ export function getLegalConfig() {
       : 14,
   };
 }
-
