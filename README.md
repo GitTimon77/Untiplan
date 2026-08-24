@@ -33,6 +33,12 @@ npm run dev
 
 Untiplan ist danach unter `http://localhost:3000` erreichbar. Lokale Sitzungsdaten werden im ignorierten Verzeichnis `data` gespeichert.
 
+## Rechtliche Angaben konfigurieren
+
+Impressum und Datenschutzerklärung sind unter `/impressum` und `/datenschutz` öffentlich erreichbar und in der gesamten App verlinkt. Vor einer öffentlichen Bereitstellung müssen in `.env` mindestens `LEGAL_NAME`, `LEGAL_STREET`, `LEGAL_POSTAL_CODE`, `LEGAL_CITY`, `LEGAL_EMAIL` und `LEGAL_PHONE` gesetzt werden. Optionale Unternehmens-, Register- und Hosting-Angaben sind in `.env.example` dokumentiert. Solange Pflichtangaben fehlen, weisen beide Seiten sichtbar darauf hin.
+
+`LEGAL_USE_CLOUDFLARE` muss der tatsächlichen Bereitstellung entsprechen. Bei einem anderen externen Hoster sind außerdem `LEGAL_HOSTING_PROVIDER` und `LEGAL_HOSTING_PRIVACY_URL` zu ergänzen. Die Texte bilden die technische Funktionsweise dieses Projekts ab, ersetzen aber keine rechtliche Prüfung des konkreten Betriebsmodells.
+
 ## Automatisch auf Ubuntu deployen
 
 Der vollständige Ablauf steht in [DEPLOYMENT.md](DEPLOYMENT.md). Er umfasst:

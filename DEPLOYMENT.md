@@ -178,6 +178,16 @@ WEBUNTIS_CLIENT=Untiplan
 APP_BIND_ADDRESS=127.0.0.1
 APP_PORT=3002
 CLOUDFLARE_TUNNEL_TOKEN=
+LEGAL_NAME=Max Mustermann
+LEGAL_STREET=Musterstraße 1
+LEGAL_POSTAL_CODE=12345
+LEGAL_CITY=Musterstadt
+LEGAL_COUNTRY=Deutschland
+LEGAL_EMAIL=kontakt@example.com
+LEGAL_PHONE=+49 123 456789
+LEGAL_HOSTING_PROVIDER=
+LEGAL_HOSTING_PRIVACY_URL=
+LEGAL_USE_CLOUDFLARE=true
 ```
 
 Dateirechte prüfen:
@@ -192,6 +202,8 @@ Wichtige Regeln:
 - `.env` niemals committen oder in GitHub hochladen.
 - `SESSION_SECRET` dauerhaft sichern und nicht bei jedem Deployment neu erzeugen.
 - Eine Änderung von `SESSION_SECRET` meldet alle Benutzer ab und macht gespeicherte Zugangsdaten unlesbar.
+- Die `LEGAL_*`-Werte werden öffentlich im Impressum beziehungsweise in der Datenschutzerklärung angezeigt. Die Beispielwerte müssen durch echte Betreiberangaben ersetzt werden.
+- `LEGAL_USE_CLOUDFLARE` und die Hosting-Angaben müssen der tatsächlich eingesetzten Infrastruktur entsprechen.
 - Die `.dockerignore` verhindert, dass `.env` in den Docker-Build-Kontext gelangt.
 
 ## 5. Untiplan erstmals manuell starten
