@@ -175,6 +175,7 @@ SESSION_SECRET=HIER_DEN_GENERIERTEN_WERT_EINTRAGEN
 SESSION_TTL_DAYS=14
 DATA_DIR=./data
 WEBUNTIS_CLIENT=Untiplan
+APP_BIND_ADDRESS=127.0.0.1
 APP_PORT=3002
 CLOUDFLARE_TUNNEL_TOKEN=
 ```
@@ -216,7 +217,7 @@ docker compose logs -f app
 docker inspect --format='{{.State.Health.Status}}' untiplan-app-1
 ```
 
-Die Portbindung `127.0.0.1:3002:3000` ist absichtlich nur lokal erreichbar. Port 3002 ist der Host-Port; Port 3000 bleibt der interne Container-Port. Mit `APP_PORT` in `.env` kann der Host-Port geändert werden, ohne Dockerfile oder Compose-Datei anzupassen.
+Die Portbindung `127.0.0.1:3002:3000` ist standardmäßig nur lokal erreichbar. Port 3002 ist der Host-Port; Port 3000 bleibt der interne Container-Port. Mit `APP_BIND_ADDRESS` und `APP_PORT` in `.env` können Bind-Adresse und Host-Port geändert werden, ohne Dockerfile oder Compose-Datei anzupassen.
 
 ## 6. Optional: Cloudflare-Tunnel aktivieren
 
@@ -229,6 +230,22 @@ Der Cloudflare-Ingress zeigt auf:
 ```text
 http://localhost:3002
 ```
+
+### Bereits vorhandener Tunnel in einem anderen Docker-Container
+
+Ein separater Tunnel-Container erreicht die Loopback-Adresse des Ubuntu-Hosts nicht. In diesem Fall in `/opt/untiplan/.env` die lokale IP-Adresse des Servers eintragen:
+
+```dotenv
+APP_BIND_ADDRESS=192.168.178.11
+```
+
+Die Published Application in Cloudflare zeigt dann auf:
+
+```text
+http://192.168.178.11:3002
+```
+
+Die IP-Adresse muss zur tatsächlichen lokalen Adresse des Ubuntu-Servers passen. Eine feste DHCP-Zuordnung im Router verhindert, dass sich das Ziel später ändert.
 
 ### Tunnel als Compose-Dienst
 

@@ -56,11 +56,13 @@ docker compose up -d --wait --wait-timeout 180 app
 docker compose ps
 ```
 
-Der Container lauscht intern auf Port 3000 und wird standardmäßig nur unter `127.0.0.1:3002` veröffentlicht. Der Host-Port lässt sich mit `APP_PORT` in `.env` ändern. Für öffentlichen Zugriff wird ein Reverse Proxy oder der optionale Cloudflare-Tunnel benötigt. Die Sitzungs- und Filterdaten liegen dauerhaft im Volume `untiplan_data`.
+Der Container lauscht intern auf Port 3000 und wird standardmäßig nur unter `127.0.0.1:3002` veröffentlicht. Bind-Adresse und Host-Port lassen sich mit `APP_BIND_ADDRESS` und `APP_PORT` in `.env` ändern. Für öffentlichen Zugriff wird ein Reverse Proxy oder der optionale Cloudflare-Tunnel benötigt. Die Sitzungs- und Filterdaten liegen dauerhaft im Volume `untiplan_data`.
 
 ## Cloudflare Tunnel
 
 Bei einem auf dem Host eingerichteten Tunnel zeigt der Ingress standardmäßig auf `http://localhost:3002`.
+
+Läuft ein bereits vorhandener Tunnel in einem separaten Docker-Container, kann in `.env` beispielsweise `APP_BIND_ADDRESS=192.168.178.11` gesetzt werden. Die Cloudflare-Dienst-URL lautet dann `http://192.168.178.11:3002`.
 
 Alternativ kann der Compose-Dienst verwendet werden. Im Cloudflare-Zero-Trust-Dashboard muss die Dienst-URL dann `http://app:3000` lauten. Den Tunnel-Token als `CLOUDFLARE_TUNNEL_TOKEN` in `.env` eintragen und anschließend starten:
 
