@@ -54,6 +54,19 @@ jobs:
       name: production
 
     steps:
+      - name: cloudflared installieren
+        env:
+          # 2026.5.1 ist gepinnt, weil neuere Versionen derzeit eine offene
+          # Regression bei headless Service-Tokens für access ssh haben.
+          CLOUDFLARED_VERSION: 2026.5.1
+          CLOUDFLARED_SHA256: 3c6a5ba995a258dbe90f98e5fdb2c2620b7be72c3ca761614f6eb52aee252cea
+        run: |
+          curl --fail --location --silent --show-error --retry 3 \
+            --output "$RUNNER_TEMP/cloudflared" \
+            "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64"
+          printf '%s  %s\n' "$CLOUDFLARED_SHA256" "$RUNNER_TEMP/cloudflared" | sha256sum --check -
+          chmod 700 "$RUNNER_TEMP/cloudflared"
+
       - name: SSH-Verbindung vorbereiten
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
@@ -71,11 +84,17 @@ jobs:
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           DEPLOY_SHA: ${{ github.sha }}
+          CLOUDFLARED_BIN: ${{ runner.temp }}/cloudflared
+          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
+          : "${TUNNEL_SERVICE_TOKEN_ID:?CF_ACCESS_CLIENT_ID fehlt}"
+          : "${TUNNEL_SERVICE_TOKEN_SECRET:?CF_ACCESS_CLIENT_SECRET fehlt}"
           ssh \
             -i ~/.ssh/id_ed25519 \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
+            -o "ProxyCommand=$CLOUDFLARED_BIN access ssh --hostname %h" \
             -p "$SERVER_PORT" \
             "$SERVER_USER@$SERVER_HOST" \
             "DEPLOY_SHA='$DEPLOY_SHA' bash -se" <<'REMOTE'

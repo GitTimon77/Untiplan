@@ -40,10 +40,11 @@ Der vollständige Ablauf steht in [DEPLOYMENT.md](DEPLOYMENT.md). Er umfasst:
 2. Dem Server read-only Zugriff auf das GitHub-Repository geben.
 3. `.env` und das dauerhafte Daten-Volume auf dem Server anlegen.
 4. einen separaten SSH-Schlüssel für GitHub Actions hinterlegen.
-5. die fünf benötigten Secrets im GitHub-Environment `production` speichern.
-6. mit dem enthaltenen Workflow bei jedem Push auf `main` testen und deployen.
+5. den SSH-Hostnamen und Service-Token in Cloudflare Access einrichten.
+6. die sieben benötigten Secrets im GitHub-Environment `production` speichern.
+7. mit dem enthaltenen Workflow bei jedem Push auf `main` testen und deployen.
 
-Der Workflow in `.github/workflows/deploy.yml` führt Lint, Typprüfung, Tests und Produktions-Build aus. Danach deployt er exakt den geprüften Commit per SSH. Der Compose-Healthcheck muss erfolgreich sein; andernfalls wird automatisch der zuvor laufende Commit wiederhergestellt.
+Der Workflow in `.github/workflows/deploy.yml` führt Lint, Typprüfung, Tests und Produktions-Build aus. Danach deployt er exakt den geprüften Commit per SSH über Cloudflare Access. Der Compose-Healthcheck muss erfolgreich sein; andernfalls wird automatisch der zuvor laufende Commit wiederhergestellt.
 
 ## Docker manuell starten
 

@@ -4,7 +4,7 @@ Diese Anleitung richtet einen einzelnen Ubuntu-Produktionsserver ein. Danach lö
 
 1. GitHub Actions installiert die npm-Abhängigkeiten.
 2. Lint, Typprüfung, Tests und Produktions-Build müssen erfolgreich sein.
-3. GitHub Actions verbindet sich per SSH mit dem Ubuntu-Server.
+3. GitHub Actions verbindet sich per SSH über Cloudflare Access mit dem Ubuntu-Server.
 4. Der Server lädt exakt den zuvor geprüften Git-Commit.
 5. Docker baut das App-Image neu und startet den Container.
 6. Compose wartet auf den Healthcheck unter `/api/health`.
@@ -15,9 +15,9 @@ Die Datei `.env` und das Docker-Volume `untiplan_data` bleiben bei einem Deploym
 ## Voraussetzungen
 
 - Ubuntu-Server mit `sudo`-Zugriff
-- erreichbarer SSH-Port, normalerweise Port 22
+- aktiver Cloudflare-Tunnel und eine bei Cloudflare verwaltete Domain
 - GitHub-Repository `GitTimon77/Untiplan`
-- optional eine Domain und ein Cloudflare-Tunnel
+- Zugriff auf Cloudflare Zero Trust
 - Zugriff auf die Repository-Einstellungen bei GitHub
 
 In den Beispielen werden diese Werte verwendet:
@@ -279,23 +279,46 @@ chmod 600 ~/.ssh/authorized_keys
 
 Der private Schlüssel bleibt auf dem eigenen Rechner und wird gleich als GitHub-Secret gespeichert. Er darf niemals auf den Server oder ins Repository kopiert werden.
 
-## 8. SSH-Host-Key des Servers erfassen
+## 8. SSH über Cloudflare Access einrichten
 
-GitHub Actions prüft den Host-Key streng und akzeptiert keinen unbekannten Server. Dadurch wird verhindert, dass das Deployment unbemerkt mit einem anderen Server spricht.
+Ein normaler Cloudflare-Webtunnel macht SSH nicht automatisch erreichbar. Für GitHub Actions wird im vorhandenen Tunnel ein eigener SSH-Hostname angelegt, beispielsweise `ssh.example.com`.
 
-Auf dem Ubuntu-Server den Fingerprint anzeigen:
+In Cloudflare Zero Trust:
+
+1. `Networking` → `Tunnels` öffnen und den vorhandenen Tunnel auswählen.
+2. Unter `Routes` eine `Published application` hinzufügen.
+3. Als Subdomain beispielsweise `ssh` und die eigene Domain auswählen.
+4. Als Service `SSH` und als Ziel `localhost:22` eintragen.
+5. Speichern und prüfen, dass der Tunnel weiterhin `Healthy` ist.
+
+Danach eine Access-Anwendung für denselben Hostnamen erstellen und einen Service-Token zulassen:
+
+1. `Access controls` → `Applications` öffnen.
+2. Eine selbst gehostete Anwendung für den SSH-Hostnamen anlegen.
+3. Unter `Access controls` → `Service credentials` → `Service Tokens` einen Token namens `Untiplan GitHub Actions` erstellen.
+4. Client ID und Client Secret sofort sicher kopieren; das Secret wird nur einmal vollständig angezeigt.
+5. In der Access-Anwendung eine Richtlinie mit Aktion `Service Auth` anlegen.
+6. Unter `Include` den zuvor erstellten Service-Token auswählen.
+
+Cloudflare beschreibt den SSH-Published-Hostname in der [SSH-Tunnel-Anleitung](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/use-cases/ssh/ssh-cloudflared-authentication/) und maschinelle Zugänge in der [Service-Token-Dokumentation](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/).
+
+### SSH-Host-Key erfassen
+
+Cloudflare transportiert die SSH-Verbindung, ersetzt aber nicht die Identität des Ubuntu-Servers. GitHub Actions prüft deshalb weiterhin dessen Ed25519-Host-Key.
+
+Auf dem Server zunächst den Fingerprint anzeigen:
 
 ```bash
 sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
 ```
 
-Auf dem eigenen Rechner den Host-Key abrufen:
+Danach eine `known_hosts`-Zeile erzeugen. `ssh.example.com` durch den tatsächlichen SSH-Hostnamen ersetzen:
 
-```powershell
-ssh-keyscan -p 22 -H DEINE_SERVER_IP
+```bash
+sudo awk '{print "ssh.example.com " $1 " " $2}' /etc/ssh/ssh_host_ed25519_key.pub
 ```
 
-Bei einem anderen SSH-Port `22` entsprechend ersetzen. Den Fingerprint des abgerufenen Ed25519-Schlüssels mit dem Fingerprint auf dem Server vergleichen. Erst danach die vollständige `ssh-keyscan`-Zeile für das GitHub-Secret verwenden.
+Die ausgegebene einzelne Zeile wird später vollständig als `SERVER_KNOWN_HOSTS` gespeichert. Der private SSH-Host-Key unter `/etc/ssh/ssh_host_ed25519_key` darf niemals angezeigt oder kopiert werden.
 
 ## 9. GitHub-Environment und Secrets einrichten
 
@@ -304,16 +327,18 @@ In GitHub:
 1. Repository `Untiplan` öffnen.
 2. `Settings` → `Environments` wählen.
 3. Ein Environment namens `production` erstellen.
-4. Optional unter `Deployment branches` ausschließlich `main` erlauben.
-5. Unter `Environment secrets` die folgenden fünf Werte anlegen.
+4. Unter `Deployment branches` ausschließlich `main` erlauben.
+5. Unter `Environment secrets` die folgenden sieben Werte anlegen.
 
 | Secret | Wert |
 |---|---|
-| `SERVER_HOST` | Server-IP oder DNS-Name, ohne `https://` |
-| `SERVER_PORT` | SSH-Port, normalerweise `22` |
+| `SERVER_HOST` | Cloudflare-SSH-Hostname, beispielsweise `ssh.example.com` |
+| `SERVER_PORT` | `22` |
 | `SERVER_USER` | `deploy` |
 | `SERVER_SSH_KEY` | vollständiger Inhalt der privaten Datei `untiplan_actions` |
-| `SERVER_KNOWN_HOSTS` | vollständige, verifizierte Ausgabe von `ssh-keyscan` |
+| `SERVER_KNOWN_HOSTS` | die auf dem Server erzeugte Zeile für den Cloudflare-SSH-Hostnamen |
+| `CF_ACCESS_CLIENT_ID` | Client ID des Cloudflare-Service-Tokens |
+| `CF_ACCESS_CLIENT_SECRET` | Client Secret des Cloudflare-Service-Tokens |
 
 Den privaten Schlüssel unter Windows anzeigen:
 
@@ -392,8 +417,15 @@ Der erste Befehl sollte denselben Commit anzeigen wie der erfolgreiche GitHub-Ac
 
 ### `Host key verification failed`
 
-- `SERVER_KNOWN_HOSTS` fehlt oder wurde für einen anderen Host beziehungsweise Port erzeugt.
+- `SERVER_KNOWN_HOSTS` fehlt oder enthält nicht den in `SERVER_HOST` verwendeten Cloudflare-SSH-Hostnamen.
 - Nach einer legitimen Neuinstallation des Servers den neuen Host-Key erneut direkt auf dem Server verifizieren und das Secret aktualisieren.
+
+### Cloudflare öffnet eine Browser-Anmeldung oder meldet einen Handshake-Fehler
+
+- `CF_ACCESS_CLIENT_ID` oder `CF_ACCESS_CLIENT_SECRET` fehlt beziehungsweise ist abgelaufen.
+- Die Access-Richtlinie verwendet nicht die Aktion `Service Auth`.
+- Der Service-Token wurde nicht unter `Include` ausgewählt.
+- Der Published Hostname zeigt nicht als `SSH`-Dienst auf `localhost:22`.
 
 ### `Repository not found` oder Fehler bei `git fetch`
 
@@ -423,7 +455,7 @@ curl -v http://127.0.0.1:3002/api/health
 
 ### App ist lokal erreichbar, aber nicht über die Domain
 
-Das Deployment öffnet Port 3000 absichtlich nicht öffentlich. In diesem Fall Cloudflare-Tunnel, DNS und den dort eingetragenen Dienst prüfen.
+Das Deployment öffnet Host-Port 3002 absichtlich nicht öffentlich. In diesem Fall Cloudflare-Tunnel, DNS und den dort eingetragenen Dienst prüfen.
 
 ## 14. Vorhandenes altes Docker-Volume migrieren
 
