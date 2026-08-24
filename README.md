@@ -1,70 +1,84 @@
-# BetterWebUntis Web
+# Untiplan
 
-Eine eigenständige Next.js-WebApp/PWA für WebUntis. Der Browser spricht ausschließlich mit dieser Anwendung; alle WebUntis-JSON-RPC-Aufrufe und die `JSESSIONID` bleiben auf dem Server.
+Untiplan ist eine eigenständige Next.js-WebApp/PWA für WebUntis. Der Browser spricht ausschließlich mit Untiplan; alle WebUntis-JSON-RPC-Aufrufe und die `JSESSIONID` bleiben auf dem Server.
 
-## Enthalten
+## Funktionen
 
 - sichere Anmeldung über `authenticate` und serverseitige WebUntis-Aufrufe
 - zufällige, `HttpOnly`-/`SameSite`-geschützte App-Sitzung
 - AES-256-GCM-verschlüsselte WebUntis-Zugangsdaten im persistenten Server-Volume
 - Wochen- und Tagesstundenplan, Unterrichtsdetails und Ferieninformationen
 - Kennzeichnung von Ausfall, Vertretung, unregelmäßigem Unterricht und Veranstaltungen
-- automatische Kursliste aus Fach plus ursprünglicher Lehrkraft (`subjectId-teacher.orgid|id`)
+- automatische Kursliste aus Fach plus ursprünglicher Lehrkraft
 - dauerhaft gespeicherte, pro Sitzung getrennte Kursfilter
 - responsive Oberfläche, Dark Mode, Web-App-Manifest und Service Worker
-- Docker Compose, Healthcheck und optionaler Cloudflare-Tunnel
+- Docker Compose, Healthcheck, optionaler Cloudflare-Tunnel und automatisches GitHub-Deployment
 
 ## Lokal starten
 
-Voraussetzungen: Node.js 20.9 oder neuer.
+Voraussetzung ist Node.js 20.19 oder neuer; empfohlen wird Node.js 22.
 
 ```bash
 cp .env.example .env
-# SESSION_SECRET in .env durch mindestens 32 zufällige Zeichen ersetzen
-npm install
+openssl rand -base64 48
+```
+
+Die Ausgabe als `SESSION_SECRET` in `.env` eintragen. Anschließend:
+
+```bash
+npm ci
 npm run dev
 ```
 
-Danach `http://localhost:3000` öffnen. Für einen Secret-Wert eignet sich beispielsweise `openssl rand -base64 48`.
+Untiplan ist danach unter `http://localhost:3000` erreichbar. Lokale Sitzungsdaten werden im ignorierten Verzeichnis `data` gespeichert.
 
-## Ubuntu/Docker
+## Automatisch auf Ubuntu deployen
+
+Der vollständige Ablauf steht in [DEPLOYMENT.md](DEPLOYMENT.md). Er umfasst:
+
+1. Docker und einen eigenen Deployment-Benutzer auf Ubuntu einrichten.
+2. Dem Server read-only Zugriff auf das GitHub-Repository geben.
+3. `.env` und das dauerhafte Daten-Volume auf dem Server anlegen.
+4. einen separaten SSH-Schlüssel für GitHub Actions hinterlegen.
+5. die fünf benötigten Secrets im GitHub-Environment `production` speichern.
+6. mit dem enthaltenen Workflow bei jedem Push auf `main` testen und deployen.
+
+Der Workflow in `.github/workflows/deploy.yml` führt Lint, Typprüfung, Tests und Produktions-Build aus. Danach deployt er exakt den geprüften Commit per SSH. Der Compose-Healthcheck muss erfolgreich sein; andernfalls wird automatisch der zuvor laufende Commit wiederhergestellt.
+
+## Docker manuell starten
 
 ```bash
-git clone <dein-repository> better-webuntis-web
-cd better-webuntis-web
 cp .env.example .env
-openssl rand -base64 48
-# Ausgabe als SESSION_SECRET in .env eintragen
-docker compose up -d --build app
+# SESSION_SECRET in .env ersetzen
+docker compose build --pull app
+docker compose up -d --wait --wait-timeout 180 app
 docker compose ps
 ```
 
-Die App lauscht absichtlich nur auf `127.0.0.1:3000`; sie ist damit nicht direkt aus dem Internet erreichbar. Daten liegen im Docker-Volume `betterwebuntis_data`.
+Die App lauscht absichtlich nur auf `127.0.0.1:3000`. Für öffentlichen Zugriff wird ein Reverse Proxy oder der optionale Cloudflare-Tunnel benötigt. Die Sitzungs- und Filterdaten liegen dauerhaft im Volume `untiplan_data`.
 
 ## Cloudflare Tunnel
 
-Variante A: Bei einem bereits auf dem Host eingerichteten Tunnel zeigt der Ingress auf `http://localhost:3000`.
+Bei einem auf dem Host eingerichteten Tunnel zeigt der Ingress auf `http://localhost:3000`.
 
-Variante B: Im Cloudflare-Zero-Trust-Dashboard einen Tunnel und einen öffentlichen Hostnamen anlegen. Als Dienst-URL `http://app:3000` wählen, den Tunnel-Token als `CLOUDFLARE_TUNNEL_TOKEN` in `.env` speichern und starten:
+Alternativ kann der Compose-Dienst verwendet werden. Im Cloudflare-Zero-Trust-Dashboard muss die Dienst-URL dann `http://app:3000` lauten. Den Tunnel-Token als `CLOUDFLARE_TUNNEL_TOKEN` in `.env` eintragen und anschließend starten:
 
 ```bash
-docker compose --profile tunnel up -d --build
+docker compose --profile tunnel up -d --wait --wait-timeout 180
 ```
 
-Cloudflare übernimmt TLS. Der Sitzungs-Cookie wird im Produktionscontainer automatisch mit `Secure` gesetzt.
-
-## Wartung und Prüfungen
+## Wartung
 
 ```bash
+npm run lint
 npm run typecheck
 npm test
 npm run build
 docker compose logs -f app
-docker compose pull cloudflared && docker compose --profile tunnel up -d --build
 ```
 
-Das Healthcheck-Ziel ist `/api/health`. Ein Backup des Docker-Volumes sichert Sitzungen und Filter. Nach einer Änderung von `SESSION_SECRET` sind bereits verschlüsselte Sitzungen nicht mehr lesbar; Benutzer müssen sich neu anmelden. Das Secret deshalb sicher sichern und nicht ins Repository einchecken.
+Das Healthcheck-Ziel ist `/api/health`. Eine Änderung von `SESSION_SECRET` macht bereits verschlüsselte Sitzungen unlesbar; das Secret sollte daher gesichert und niemals eingecheckt werden.
 
-## Sicherheitsgrenzen der ersten Version
+## Sicherheitsgrenzen
 
-Der Dateispeicher ist für eine einzelne App-Instanz gedacht. Für mehrere parallel laufende Replikate sollte er durch PostgreSQL/Redis mit zentralem Session- und Filterstore ersetzt werden. Die Zieladresse akzeptiert ausschließlich WebUntis-Hostnamen und verwendet HTTPS. Zusätzlich sollten Ubuntu, Docker und `cloudflared` regelmäßig aktualisiert sowie Cloudflare Access erwogen werden, wenn nur ein begrenzter Nutzerkreis Zugriff erhalten soll.
+Der Dateispeicher ist für eine einzelne App-Instanz gedacht. Für mehrere parallele Replikate sollte er durch PostgreSQL oder Redis mit zentralem Session- und Filterstore ersetzt werden. Die Zieladresse akzeptiert ausschließlich WebUntis-Hostnamen und verwendet HTTPS. Ubuntu, Docker und `cloudflared` sollten regelmäßig aktualisiert werden. Für einen begrenzten Nutzerkreis empfiehlt sich zusätzlich Cloudflare Access.

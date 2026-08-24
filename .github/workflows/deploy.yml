@@ -1,0 +1,114 @@
+name: Untiplan prüfen und deployen
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: untiplan-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Qualität prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v7
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Lint ausführen
+        run: npm run lint
+
+      - name: Typen prüfen
+        run: npm run typecheck
+
+      - name: Tests ausführen
+        run: npm test
+
+      - name: Produktions-Build prüfen
+        run: npm run build
+
+  deploy:
+    name: Auf Produktionsserver deployen
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+
+    steps:
+      - name: SSH-Verbindung vorbereiten
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Getesteten Commit deployen
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          ssh \
+            -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -p "$SERVER_PORT" \
+            "$SERVER_USER@$SERVER_HOST" \
+            "DEPLOY_SHA='$DEPLOY_SHA' bash -se" <<'REMOTE'
+          set -Eeuo pipefail
+
+          cd /opt/untiplan
+
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "Abbruch: Im Server-Repository liegen nicht eingecheckte Änderungen."
+            exit 1
+          fi
+
+          previous_sha="$(git rev-parse HEAD)"
+          git fetch --prune origin main
+          git cat-file -e "${DEPLOY_SHA}^{commit}"
+          git checkout --detach "$DEPLOY_SHA"
+          docker compose config --quiet
+
+          if docker compose build --pull app && \
+             docker compose up --detach --wait --wait-timeout 180 app; then
+            echo "Untiplan wurde erfolgreich auf $DEPLOY_SHA aktualisiert."
+            docker compose ps
+            exit 0
+          fi
+
+          echo "Deployment fehlgeschlagen. Die letzten App-Logs folgen:"
+          docker compose logs --tail=200 app || true
+          echo "Vorheriger Stand $previous_sha wird wiederhergestellt."
+
+          git checkout --detach "$previous_sha"
+          docker compose build app
+          docker compose up --detach --wait --wait-timeout 180 app
+
+          echo "Rollback erfolgreich. Das Deployment bleibt als fehlgeschlagen markiert."
+          exit 1
+          REMOTE
