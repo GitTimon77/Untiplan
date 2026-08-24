@@ -78,41 +78,6 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Cloudflare Access prüfen
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: |
-          : "${SERVER_HOST:?SERVER_HOST fehlt}"
-          : "${CF_ACCESS_CLIENT_ID:?CF_ACCESS_CLIENT_ID fehlt}"
-          : "${CF_ACCESS_CLIENT_SECRET:?CF_ACCESS_CLIENT_SECRET fehlt}"
-
-          identity_file="$RUNNER_TEMP/cloudflare-access-identity.json"
-          if ! access_status="$(
-            curl --silent --show-error \
-              --output "$identity_file" \
-              --write-out '%{http_code}' \
-              --header "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-              --header "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-              "https://$SERVER_HOST/cdn-cgi/access/get-identity"
-          )"; then
-            echo "::error::Cloudflare Access konnte nicht erreicht werden."
-            exit 1
-          fi
-
-          if [ "$access_status" != "200" ]; then
-            echo "::error::Cloudflare Access hat den Service Token abgelehnt (HTTP $access_status)."
-            exit 1
-          fi
-
-          if ! jq --exit-status '.service_token_status == true' "$identity_file" >/dev/null; then
-            echo "::error::Cloudflare Access hat keine gültige Service-Token-Identität bestätigt."
-            exit 1
-          fi
-
-          echo "Cloudflare Access hat den Service Token akzeptiert."
-
       - name: Getesteten Commit deployen
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -125,11 +90,14 @@ jobs:
         run: |
           : "${TUNNEL_SERVICE_TOKEN_ID:?CF_ACCESS_CLIENT_ID fehlt}"
           : "${TUNNEL_SERVICE_TOKEN_SECRET:?CF_ACCESS_CLIENT_SECRET fehlt}"
+          cloudflared_debug_log="$RUNNER_TEMP/cloudflared-debug.log"
+
+          set +e
           ssh \
             -i ~/.ssh/id_ed25519 \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
-            -o "ProxyCommand=$CLOUDFLARED_BIN access ssh --hostname %h" \
+            -o "ProxyCommand=$CLOUDFLARED_BIN access ssh --hostname %h --log-level debug --logfile $cloudflared_debug_log" \
             -p "$SERVER_PORT" \
             "$SERVER_USER@$SERVER_HOST" \
             "DEPLOY_SHA='$DEPLOY_SHA' bash -se" <<'REMOTE'
@@ -166,3 +134,21 @@ jobs:
           echo "Rollback erfolgreich. Das Deployment bleibt als fehlgeschlagen markiert."
           exit 1
           REMOTE
+          ssh_status=$?
+          set -e
+
+          if [ "$ssh_status" -ne 0 ] && [ -f "$cloudflared_debug_log" ]; then
+            handshake_status="$(
+              grep --text --only-matching --extended-regexp \
+                'HTTP/[0-9.]+ [0-9]{3} [A-Za-z ]+' \
+                "$cloudflared_debug_log" | tail --lines=1 || true
+            )"
+
+            if [ -n "$handshake_status" ]; then
+              echo "::error::Cloudflare WebSocket-Handshake: $handshake_status"
+            else
+              echo "::error::Cloudflare hat keinen auswertbaren WebSocket-Status geliefert."
+            fi
+          fi
+
+          exit "$ssh_status"
