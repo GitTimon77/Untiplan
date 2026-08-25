@@ -2,6 +2,19 @@
 
 Untiplan ist eine eigenständige Next.js-WebApp/PWA für WebUntis. Der Browser spricht ausschließlich mit Untiplan; alle WebUntis-JSON-RPC-Aufrufe und die `JSESSIONID` bleiben auf dem Server.
 
+## Schnellstart (lokal, 3 Schritte)
+
+1. `.env` anlegen: `cp .env.example .env`
+2. Secret erzeugen und als `SESSION_SECRET` in `.env` eintragen: `openssl rand -base64 48`
+3. Starten:
+
+```bash
+npm ci
+npm run dev
+```
+
+Danach ist Untiplan unter `http://localhost:3000` erreichbar.
+
 ## Funktionen
 
 - sichere Anmeldung über `authenticate` und serverseitige WebUntis-Aufrufe
@@ -16,7 +29,7 @@ Untiplan ist eine eigenständige Next.js-WebApp/PWA für WebUntis. Der Browser s
 - responsive Oberfläche, Dark Mode, Web-App-Manifest und Service Worker
 - Docker Compose, Healthcheck, optionaler Cloudflare-Tunnel und automatisches GitHub-Deployment
 
-## Lokal starten
+## Lokal starten (Details)
 
 Voraussetzung ist Node.js 20.19 oder neuer; empfohlen wird Node.js 22.
 
@@ -32,9 +45,22 @@ npm ci
 npm run dev
 ```
 
-Untiplan ist danach unter `http://localhost:3000` erreichbar. Lokale Sitzungsdaten werden im ignorierten Verzeichnis `data` gespeichert.
+Lokale Sitzungsdaten werden im ignorierten Verzeichnis `data` gespeichert.
 
 Eine lokale Vorschau mit gültigen WebUntis-Beispieldaten ist im Entwicklungsmodus unter `http://localhost:3000/vorschau` verfügbar. Sie benötigt keine Anmeldung und ist in Produktions-Builds deaktiviert.
+
+## Umgebungsvariablen im Überblick
+
+| Variable | Pflicht | Zweck |
+| --- | --- | --- |
+| `SESSION_SECRET` | ja | Signiert/verschlüsselt die Untiplan-Sitzung (mindestens 32 zufällige Zeichen). |
+| `WEBUNTIS_CLIENT` | nein | Client-Name für WebUntis-Anfragen (Standard aus `.env.example`). |
+| `APP_BIND_ADDRESS` | nein | Bind-Adresse des App-Containers (Standard: `127.0.0.1`). |
+| `APP_PORT` | nein | Host-Port für die App-Veröffentlichung (Standard: `3002`). |
+| `CLOUDFLARE_TUNNEL_TOKEN` | nein | Token für den optionalen Compose-Tunnel-Dienst. |
+| `LEGAL_NAME`, `LEGAL_STREET`, `LEGAL_POSTAL_CODE`, `LEGAL_CITY`, `LEGAL_EMAIL` | öffentlich erforderlich | Mindestangaben für Impressum/Datenschutz bei öffentlicher Bereitstellung. |
+| `LEGAL_USE_CLOUDFLARE` | abhängig vom Betrieb | Muss zur tatsächlichen Bereitstellung passen (`true`/`false`). |
+| `LEGAL_HOSTING_PROVIDER`, `LEGAL_HOSTING_PRIVACY_URL` | bei externem Hoster erforderlich | Zusätzliche Pflichtangaben, wenn nicht ausschließlich über Cloudflare bereitgestellt wird. |
 
 ## Rechtliche Angaben konfigurieren
 
@@ -70,11 +96,11 @@ Der Container lauscht intern auf Port 3000 und wird standardmäßig nur unter `1
 
 ## Cloudflare Tunnel
 
-Bei einem auf dem Host eingerichteten Tunnel zeigt der Ingress standardmäßig auf `http://localhost:3002`.
+Bei einem auf dem Host eingerichteten Cloudflare-Tunnel zeigt der Ingress standardmäßig auf `http://localhost:3002`.
 
 Läuft ein bereits vorhandener Tunnel in einem separaten Docker-Container, kann in `.env` beispielsweise `APP_BIND_ADDRESS=192.168.178.11` gesetzt werden. Die Cloudflare-Dienst-URL lautet dann `http://192.168.178.11:3002`.
 
-Alternativ kann der Compose-Dienst verwendet werden. Im Cloudflare-Zero-Trust-Dashboard muss die Dienst-URL dann `http://app:3000` lauten. Den Tunnel-Token als `CLOUDFLARE_TUNNEL_TOKEN` in `.env` eintragen und anschließend starten:
+Alternativ kann der Compose-Tunnel-Dienst verwendet werden. Im Cloudflare-Zero-Trust-Dashboard muss die Dienst-URL dann `http://app:3000` lauten. Den Tunnel-Token als `CLOUDFLARE_TUNNEL_TOKEN` in `.env` eintragen und anschließend starten:
 
 ```bash
 docker compose --profile tunnel up -d --wait --wait-timeout 180
@@ -92,6 +118,23 @@ docker compose logs -f app
 
 Das Healthcheck-Ziel ist `/api/health`. Eine Änderung von `SESSION_SECRET` macht bereits verschlüsselte Sitzungen unlesbar; das Secret sollte daher gesichert und niemals eingecheckt werden.
 
+## Troubleshooting
+
+- **`SESSION_SECRET` fehlt oder ist zu kurz:** Anmeldung/Sitzung funktioniert nicht zuverlässig. Neues Secret erzeugen (`openssl rand -base64 48`) und in `.env` eintragen.
+- **Port bereits belegt:** Bei Fehlern auf `3002` in `.env` einen freien `APP_PORT` setzen und den Stack neu starten.
+- **Healthcheck bleibt `unhealthy`:** Logs mit `docker compose logs -f app` prüfen; zusätzlich kontrollieren, ob `/api/health` im Container erreichbar ist.
+- **Cloudflare-Tunnel ohne Verbindung:** Ingress-URL und `CLOUDFLARE_TUNNEL_TOKEN` prüfen und sicherstellen, dass `LEGAL_USE_CLOUDFLARE` zur tatsächlichen Betriebsart passt.
+
 ## Sicherheitsgrenzen
 
 Der Dateispeicher ist für eine einzelne App-Instanz gedacht. Für mehrere parallele Replikate sollte er durch PostgreSQL oder Redis mit zentralem Session-Speicher ersetzt werden. Die Zieladresse akzeptiert ausschließlich WebUntis-Hostnamen und verwendet HTTPS. Ubuntu, Docker und `cloudflared` sollten regelmäßig aktualisiert werden. Für einen begrenzten Nutzerkreis empfiehlt sich zusätzlich Cloudflare Access.
+
+## Architekturüberblick
+
+Untiplan arbeitet als Schutzschicht zwischen Browser und WebUntis:
+
+1. Browser spricht nur mit Untiplan.
+2. Untiplan authentifiziert sich serverseitig bei WebUntis.
+3. Untiplan verarbeitet WebUntis-Daten und liefert nur benötigte Antworten an den Browser zurück.
+
+Dadurch bleiben WebUntis-Session (`JSESSIONID`) und Zugangsdaten serverseitig gekapselt.
