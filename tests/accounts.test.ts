@@ -13,11 +13,11 @@ test("adds, switches and removes accounts in one browser account group", async (
     const { createSession, deleteSessionAndSelectNext, getSession, listAccounts, switchAccount } = await import("../src/lib/store");
     const first = await createSession(
       { server: "tenant.webuntis.com", school: "test-school", username: "test-one", password: "test-password-one" },
-      { personId: 1, personType: 5, displayName: "Testkonto Eins" },
+      { personId: 1, personType: 5, displayName: "Konto 1" },
     );
     const second = await createSession(
       { server: "tenant.webuntis.com", school: "test-school", username: "test-two", password: "test-password-two" },
-      { personId: 2, personType: 5, displayName: "Testkonto Zwei" },
+      { personId: 2, personType: 5, displayName: "Konto 2" },
       first.sessionToken,
       first.accountGroupToken,
     );

@@ -12,17 +12,17 @@ test("maps, sanitizes and deduplicates school search results", () => {
   const schools = parseSchoolSearchResponse({
     result: {
       schools: [
-        { schoolId: 1, displayName: "Testschule", address: "Testort", server: "tenant.webuntis.com", loginName: "test-school" },
+        { schoolId: 1, displayName: "Demo-Schule", address: "Beispielort", server: "tenant.webuntis.com", loginName: "test-school" },
         { schoolId: 2, displayName: "Duplikat", server: "tenant.webuntis.com", loginName: "test-school" },
-        { schoolId: 3, displayName: "Fremder Server", server: "example.com", loginName: "bad" },
+        { schoolId: 3, displayName: "Anderer Server", server: "example.com", loginName: "bad" },
       ],
     },
   });
 
   assert.deepEqual(schools, [{
     id: "1",
-    displayName: "Testschule",
-    address: "Testort",
+    displayName: "Demo-Schule",
+    address: "Beispielort",
     server: "tenant.webuntis.com",
     loginName: "test-school",
   }]);
