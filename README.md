@@ -34,6 +34,8 @@ npm run dev
 
 Untiplan ist danach unter `http://localhost:3000` erreichbar. Lokale Sitzungsdaten werden im ignorierten Verzeichnis `data` gespeichert.
 
+Eine lokale Vorschau mit gültigen WebUntis-Beispieldaten ist im Entwicklungsmodus unter `http://localhost:3000/vorschau` verfügbar. Sie benötigt keine Anmeldung und ist in Produktions-Builds deaktiviert.
+
 ## Rechtliche Angaben konfigurieren
 
 Impressum und Datenschutzerklärung sind unter `/impressum` und `/datenschutz` öffentlich erreichbar und in der gesamten App verlinkt. Vor einer öffentlichen Bereitstellung müssen in `.env` mindestens `LEGAL_NAME`, `LEGAL_STREET`, `LEGAL_POSTAL_CODE`, `LEGAL_CITY` und `LEGAL_EMAIL` gesetzt werden. Optionale Unternehmens-, Register- und Hosting-Angaben sind in `.env.example` dokumentiert.
