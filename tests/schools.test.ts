@@ -12,8 +12,8 @@ test("maps, sanitizes and deduplicates school search results", () => {
   const schools = parseSchoolSearchResponse({
     result: {
       schools: [
-        { schoolId: 1, displayName: "Beispielschule", address: "Berlin", server: "demo.webuntis.com", loginName: "demo" },
-        { schoolId: 2, displayName: "Duplikat", server: "demo.webuntis.com", loginName: "demo" },
+        { schoolId: 1, displayName: "Testschule", address: "Testort", server: "tenant.webuntis.com", loginName: "test-school" },
+        { schoolId: 2, displayName: "Duplikat", server: "tenant.webuntis.com", loginName: "test-school" },
         { schoolId: 3, displayName: "Fremder Server", server: "example.com", loginName: "bad" },
       ],
     },
@@ -21,10 +21,10 @@ test("maps, sanitizes and deduplicates school search results", () => {
 
   assert.deepEqual(schools, [{
     id: "1",
-    displayName: "Beispielschule",
-    address: "Berlin",
-    server: "demo.webuntis.com",
-    loginName: "demo",
+    displayName: "Testschule",
+    address: "Testort",
+    server: "tenant.webuntis.com",
+    loginName: "test-school",
   }]);
 });
 
