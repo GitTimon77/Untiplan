@@ -76,13 +76,18 @@ export default function DatenschutzPage() {
             <tbody>
               <tr>
                 <td><code>bwu_session</code> (Cookie)</td>
-                <td>Sichere Zuordnung deiner Anmeldung; zufälliger Sitzungswert, für JavaScript nicht lesbar</td>
-                <td>{legal.sessionDays} Tage oder bis zur Abmeldung</td>
+                <td>Sichere Zuordnung des aktuell verwendeten Kontos; zufälliger Sitzungswert, für JavaScript nicht lesbar</td>
+                <td>{legal.sessionDays} Tage oder bis zur Abmeldung dieses Kontos</td>
+              </tr>
+              <tr>
+                <td><code>bwu_accounts</code> (Cookie)</td>
+                <td>Ordnet auf Wunsch mehrere angemeldete Konten für den sicheren Kontowechsel einander zu; zufälliger Wert, für JavaScript nicht lesbar</td>
+                <td>{legal.sessionDays} Tage oder bis das letzte hinzugefügte Konto abgemeldet wurde</td>
               </tr>
               <tr>
                 <td><code>untiplan.course-filter.v1</code> (Local Storage)</td>
                 <td>Speichert auf deinem Gerät, welche Kurskennungen du ein- oder ausgeblendet hast</td>
-                <td>Bis du den Filter oder die Browserdaten löschst</td>
+                <td>Bis du den Filter zurücksetzt, das Konto wechselst, dich abmeldest oder die Browserdaten löschst</td>
               </tr>
               <tr>
                 <td>Cache Storage</td>
@@ -97,7 +102,7 @@ export default function DatenschutzPage() {
 
       <section>
         <h2>{legal.useCloudflare ? "7" : "6"}. Speicherdauer und Löschung</h2>
-        <p>Die verschlüsselte Sitzung ist höchstens {legal.sessionDays} Tage nutzbar. Bei der Abmeldung wird sie unmittelbar gelöscht; abgelaufene Sitzungen werden bei der weiteren Sitzungsverwaltung bereinigt. Vorübergehend verarbeitete Stundenplandaten werden nach Beantwortung der jeweiligen Anfrage nicht serverseitig gespeichert. Gesetzliche Aufbewahrungspflichten bleiben unberührt.</p>
+        <p>Jede verschlüsselte Kontositzung ist höchstens {legal.sessionDays} Tage nutzbar. Bei der Abmeldung wird die Sitzung des aktuellen Kontos unmittelbar gelöscht; andere ausdrücklich hinzugefügte Konten bleiben angemeldet. Abgelaufene Sitzungen werden bei der weiteren Sitzungsverwaltung bereinigt. Vorübergehend verarbeitete Stundenplandaten werden nach Beantwortung der jeweiligen Anfrage nicht serverseitig gespeichert. Gesetzliche Aufbewahrungspflichten bleiben unberührt.</p>
       </section>
 
       <section>

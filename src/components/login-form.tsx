@@ -3,10 +3,11 @@
 import { FormEvent, KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SchoolSearchResult } from "@/lib/schools";
+import { COURSE_FILTER_STORAGE_KEY } from "@/lib/local-filters";
 
 type SearchResponse = { schools?: SchoolSearchResult[]; error?: string };
 
-export function LoginForm() {
+export function LoginForm({ addingAccount = false }: { addingAccount?: boolean }) {
   const router = useRouter();
   const listboxId = useId();
   const searchFieldRef = useRef<HTMLDivElement>(null);
@@ -117,6 +118,9 @@ export function LoginForm() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Anmeldung fehlgeschlagen.");
+      if (addingAccount) {
+        try { window.localStorage.removeItem(COURSE_FILTER_STORAGE_KEY); } catch {}
+      }
       router.replace("/stundenplan");
       router.refresh();
     } catch (requestError) {
@@ -257,7 +261,7 @@ export function LoginForm() {
       </div>
       {error && <p className="error" role="alert">{error}</p>}
       <button className="primary" disabled={busy}>
-        {busy ? "Verbindung wird geprüft …" : "Sicher anmelden"}
+        {busy ? "Verbindung wird geprüft …" : addingAccount ? "Konto hinzufügen" : "Sicher anmelden"}
       </button>
       <small>Deine Zugangsdaten werden ausschließlich verschlüsselt auf diesem Server gespeichert.</small>
     </form>
