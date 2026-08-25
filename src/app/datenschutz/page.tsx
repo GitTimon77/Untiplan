@@ -85,9 +85,9 @@ export default function DatenschutzPage() {
                 <td>{legal.sessionDays} Tage oder bis das letzte hinzugefügte Konto abgemeldet wurde</td>
               </tr>
               <tr>
-                <td><code>untiplan.course-filter.v1</code> (Local Storage)</td>
-                <td>Speichert auf deinem Gerät, welche Kurskennungen du ein- oder ausgeblendet hast</td>
-                <td>Bis du den Filter zurücksetzt, das Konto wechselst, dich abmeldest oder die Browserdaten löschst</td>
+                <td><code>untiplan.course-filter.v2.*</code> (Local Storage)</td>
+                <td>Speichert je hinzugefügtem Konto getrennt, welche Kurskennungen du ein- oder ausgeblendet hast; die verwendete Kontokennung ist nicht aus Benutzername oder Schule ableitbar</td>
+                <td>Bis du den Filter zurücksetzt, das zugehörige Konto abmeldest oder die Browserdaten löschst</td>
               </tr>
               <tr>
                 <td>Cache Storage</td>

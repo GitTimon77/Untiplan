@@ -1,4 +1,7 @@
-export const COURSE_FILTER_STORAGE_KEY = "untiplan.course-filter.v1";
+export const LEGACY_COURSE_FILTER_STORAGE_KEY = "untiplan.course-filter.v1";
+export function courseFilterStorageKey(filterStorageId: string) {
+  return `untiplan.course-filter.v2.${filterStorageId}`;
+}
 
 export type CourseFilter = {
   selectedCourseKeys: string[];

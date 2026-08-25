@@ -25,11 +25,18 @@ test("adds, switches and removes accounts in one browser account group", async (
     const accounts = await listAccounts(second.sessionToken, second.accountGroupToken);
     assert.equal(accounts?.accounts.length, 2);
     assert.equal(accounts?.accounts.find(account => account.active)?.username, "second");
+    const firstFilterStorageId = (await getSession(first.sessionToken))?.filterStorageId;
+    const secondFilterStorageId = (await getSession(second.sessionToken))?.filterStorageId;
+    assert.ok(firstFilterStorageId);
+    assert.ok(secondFilterStorageId);
+    assert.notEqual(firstFilterStorageId, secondFilterStorageId);
 
     const firstAccountId = accounts?.accounts.find(account => account.username === "first")?.id;
     assert.ok(firstAccountId);
     const switched = await switchAccount(second.accountGroupToken, firstAccountId);
-    assert.equal((await getSession(switched?.sessionToken))?.credentials.username, "first");
+    const switchedSession = await getSession(switched?.sessionToken);
+    assert.equal(switchedSession?.credentials.username, "first");
+    assert.equal(switchedSession?.filterStorageId, firstFilterStorageId);
 
     const next = await deleteSessionAndSelectNext(switched?.sessionToken, second.accountGroupToken);
     assert.equal((await getSession(next?.sessionToken))?.credentials.username, "second");

@@ -1,4 +1,4 @@
-const CACHE = "untiplan-shell-v6";
+const CACHE = "untiplan-shell-v7";
 self.addEventListener("install", event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(["/login","/impressum","/datenschutz","/untiplan-logo.png?v=2"]))));
 self.addEventListener("activate", event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))));
 self.addEventListener("fetch", event => { const path = new URL(event.request.url).pathname; if (event.request.method !== "GET" || path.startsWith("/api/") || path === "/" || path === "/stundenplan") return; event.respondWith(fetch(event.request).then(response => { if (response.ok && response.type === "basic") { const copy = response.clone(); caches.open(CACHE).then(cache => cache.put(event.request, copy)); } return response; }).catch(() => caches.match(event.request).then(response => response || caches.match("/login")))); });

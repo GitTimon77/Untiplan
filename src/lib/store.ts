@@ -1,5 +1,5 @@
 import "server-only";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -53,6 +53,7 @@ function accountIdentity(credentials: Credentials) {
 function randomToken() { return randomBytes(32).toString("base64url"); }
 function randomAccountId() { return randomBytes(16).toString("base64url"); }
 function sessionIdentity(session: StoredSession) { return session.accountIdentity || accountIdentity(decrypt(session.credentials)); }
+function filterStorageId(session: StoredSession) { return createHmac("sha256", secret()).update(sessionIdentity(session)).digest("base64url").slice(0, 32); }
 
 function prune(store: Store) {
   const now = Date.now();
@@ -137,7 +138,7 @@ export async function createSession(
   return { sessionToken, accountGroupToken: nextAccountGroupToken };
 }
 
-export async function getSession(token?: string) { if (!token) return null; const store = await load(); const session = store.sessions[key(token)]; if (!session || session.expiresAt <= Date.now()) return null; return { ...session, credentials: decrypt(session.credentials) }; }
+export async function getSession(token?: string) { if (!token) return null; const store = await load(); const session = store.sessions[key(token)]; if (!session || session.expiresAt <= Date.now()) return null; return { ...session, credentials: decrypt(session.credentials), filterStorageId: filterStorageId(session) }; }
 
 export async function listAccounts(sessionToken?: string, accountGroupToken?: string) {
   if (!sessionToken) return null;

@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeCourseFilter, parseCourseFilter, serializeCourseFilter } from "../src/lib/local-filters";
+import { courseFilterStorageKey, normalizeCourseFilter, parseCourseFilter, serializeCourseFilter } from "../src/lib/local-filters";
+
+test("course filter storage is separated by account", () => {
+  assert.equal(courseFilterStorageKey("account-one"), "untiplan.course-filter.v2.account-one");
+  assert.notEqual(courseFilterStorageKey("account-one"), courseFilterStorageKey("account-two"));
+});
 
 test("local course filters survive serialization", () => {
   const filter = { selectedCourseKeys: ["10-20", "11-21"], filterEnabled: true };

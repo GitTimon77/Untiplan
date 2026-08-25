@@ -3,7 +3,6 @@
 import { FormEvent, KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SchoolSearchResult } from "@/lib/schools";
-import { COURSE_FILTER_STORAGE_KEY } from "@/lib/local-filters";
 
 type SearchResponse = { schools?: SchoolSearchResult[]; error?: string };
 
@@ -118,9 +117,6 @@ export function LoginForm({ addingAccount = false }: { addingAccount?: boolean }
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Anmeldung fehlgeschlagen.");
-      if (addingAccount) {
-        try { window.localStorage.removeItem(COURSE_FILTER_STORAGE_KEY); } catch {}
-      }
       router.replace("/stundenplan");
       router.refresh();
     } catch (requestError) {

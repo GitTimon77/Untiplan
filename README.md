@@ -12,7 +12,7 @@ Untiplan ist eine eigenständige Next.js-WebApp/PWA für WebUntis. Der Browser s
 - Kennzeichnung von Ausfall, Vertretung, unregelmäßigem Unterricht und Veranstaltungen
 - automatische Kursliste aus Fach plus ursprünglicher Lehrkraft
 - mehrere gleichzeitig angemeldete Konten mit direktem Kontowechsel
-- im jeweiligen Browser gespeicherte Kursfilter, die beim Kontowechsel oder Abmelden gelöscht werden
+- je Konto getrennt im Browser gespeicherte Kursfilter, die erst bei der Abmeldung dieses Kontos gelöscht werden
 - responsive Oberfläche, Dark Mode, Web-App-Manifest und Service Worker
 - Docker Compose, Healthcheck, optionaler Cloudflare-Tunnel und automatisches GitHub-Deployment
 
@@ -64,7 +64,7 @@ docker compose up -d --wait --wait-timeout 180 app
 docker compose ps
 ```
 
-Der Container lauscht intern auf Port 3000 und wird standardmäßig nur unter `127.0.0.1:3002` veröffentlicht. Bind-Adresse und Host-Port lassen sich mit `APP_BIND_ADDRESS` und `APP_PORT` in `.env` ändern. Für öffentlichen Zugriff wird ein Reverse Proxy oder der optionale Cloudflare-Tunnel benötigt. Die Sitzungsdaten liegen dauerhaft im Volume `untiplan_data`; Kursfilter verbleiben bis zum Kontowechsel oder Abmelden im jeweiligen Browser.
+Der Container lauscht intern auf Port 3000 und wird standardmäßig nur unter `127.0.0.1:3002` veröffentlicht. Bind-Adresse und Host-Port lassen sich mit `APP_BIND_ADDRESS` und `APP_PORT` in `.env` ändern. Für öffentlichen Zugriff wird ein Reverse Proxy oder der optionale Cloudflare-Tunnel benötigt. Die Sitzungsdaten liegen dauerhaft im Volume `untiplan_data`; Kursfilter werden je Konto getrennt im jeweiligen Browser gespeichert und bei der Abmeldung dieses Kontos gelöscht.
 
 ## Cloudflare Tunnel
 
