@@ -45,13 +45,19 @@ function timetableElement(type: TimetableElementType, value: MasterDataElement):
 
 export async function fetchTimetableElements(input: LoginInput, person: { personId: number; personType: number; klasseId?: number }) {
   const client = new WebUntisClient(input);
-  await client.authenticate();
+  const authenticatedPerson = await client.authenticate();
   try {
     const results = await Promise.allSettled(masterDataRequests.map(request => request.load(client)));
     const elements = results.flatMap((result, index) => result.status === "fulfilled"
       ? result.value.flatMap(value => timetableElement(masterDataRequests[index].type, value) || [])
       : []);
-    const own = defaultTimetableElement(person);
+    // Authentication is authoritative here. Stored sessions created by an older
+    // app version may not contain the person's current timetable assignment.
+    const own = defaultTimetableElement({
+      personId: authenticatedPerson.personId ?? person.personId,
+      personType: authenticatedPerson.personType ?? person.personType,
+      klasseId: authenticatedPerson.klasseId ?? person.klasseId,
+    });
     if (own && !elements.some(element => element.id === own.id && element.type === own.type)) elements.unshift({ ...own, name: "Eigener Stundenplan" });
     const unique = [...new Map(elements.map(element => [`${element.type}:${element.id}`, element])).values()]
       .sort((a,b) => a.type - b.type || (a.longname || a.name).localeCompare(b.longname || b.name, "de"));

@@ -34,3 +34,30 @@ test("discovers only master-data lists allowed by WebUntis", async () => {
     global.fetch = originalFetch;
   }
 });
+
+test("keeps the freshly authenticated student's own timetable when student lists are denied", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (_input, init) => {
+    const request = JSON.parse(String(init?.body));
+    const result = request.method === "authenticate"
+      ? { sessionId: "test-session", personId: 99, personType: 5, klasseId: 1781 }
+      : request.method === "logout"
+        ? true
+        : undefined;
+    const body = result === undefined
+      ? { jsonrpc: "2.0", id: request.id, error: { code: -8509, message: "no rights" } }
+      : { jsonrpc: "2.0", id: request.id, result };
+    return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json", "set-cookie": "JSESSIONID=test-session; Path=/WebUntis" } });
+  };
+
+  try {
+    const response = await fetchTimetableElements(
+      { server: "school.webuntis.com", school: "school", username: "student", password: "secret" },
+      { personId: -1, personType: 13, klasseId: 0 },
+    );
+    assert.deepEqual(response.elements, [{ id: 99, type: 5, name: "Eigener Stundenplan" }]);
+    assert.deepEqual(response.defaultElement, { id: 99, type: 5 });
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
