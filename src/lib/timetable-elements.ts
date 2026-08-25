@@ -12,12 +12,23 @@ export function defaultTimetableElement(person: { personId: number; personType: 
   return null;
 }
 
+export function namedElementLabel(element: Pick<TimetableElement, "name" | "longname">) {
+  const shortName = element.name.trim();
+  const fullName = element.longname?.trim();
+  return fullName && fullName.localeCompare(shortName, "de", { sensitivity: "base" }) !== 0
+    ? `${fullName} (${shortName})`
+    : fullName || shortName;
+}
+
 export function timetableElementLabel(element: TimetableElement) {
-  return element.longname && element.longname !== element.name
-    ? `${element.name} – ${element.longname}`
-    : element.name;
+  return namedElementLabel(element);
 }
 
 export function sortTimetableElements(elements: TimetableElement[]) {
-  return [...elements].sort((a, b) => a.type - b.type || timetableElementCollator.compare(timetableElementLabel(a), timetableElementLabel(b)));
+  return [...elements].sort((a, b) => {
+    if (a.type !== b.type) return a.type - b.type;
+    const aLabel = a.type === 1 ? a.name : timetableElementLabel(a);
+    const bLabel = b.type === 1 ? b.name : timetableElementLabel(b);
+    return timetableElementCollator.compare(aLabel, bLabel);
+  });
 }
