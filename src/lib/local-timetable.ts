@@ -1,7 +1,13 @@
 import type { TimetableElementSelection, TimetableElementType } from "./types";
 
+export type TimetableViewMode = "week" | "day";
+
 export function timetableSelectionStorageKey(filterStorageId: string) {
   return `untiplan.timetable-selection.v1.${filterStorageId}`;
+}
+
+export function timetableViewModeStorageKey(filterStorageId: string) {
+  return `untiplan.timetable-view-mode.v1.${filterStorageId}`;
 }
 
 export function normalizeTimetableSelection(value: unknown): TimetableElementSelection | null {
@@ -23,4 +29,21 @@ export function parseTimetableSelection(value: string | null) {
 
 export function serializeTimetableSelection(value: TimetableElementSelection) {
   return JSON.stringify(normalizeTimetableSelection(value));
+}
+
+export function normalizeTimetableViewMode(value: unknown): TimetableViewMode {
+  return value === "day" ? "day" : "week";
+}
+
+export function parseTimetableViewMode(value: string | null): TimetableViewMode {
+  if (!value) return "week";
+  try {
+    return normalizeTimetableViewMode(JSON.parse(value));
+  } catch {
+    return "week";
+  }
+}
+
+export function serializeTimetableViewMode(value: TimetableViewMode) {
+  return JSON.stringify(normalizeTimetableViewMode(value));
 }
