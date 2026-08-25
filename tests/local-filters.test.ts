@@ -23,3 +23,10 @@ test("local filter keys are validated and deduplicated", () => {
     filterEnabled: true,
   });
 });
+
+test("empty course selections cannot hide the complete timetable", () => {
+  assert.deepEqual(normalizeCourseFilter({ selectedCourseKeys: [], filterEnabled: true }), {
+    selectedCourseKeys: [],
+    filterEnabled: false,
+  });
+});

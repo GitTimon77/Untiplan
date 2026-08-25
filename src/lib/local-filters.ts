@@ -23,7 +23,7 @@ export function normalizeCourseFilter(value: unknown): CourseFilter {
     (key): key is string => typeof key === "string" && courseKeyPattern.test(key),
   ))].slice(0, 2000);
 
-  return { selectedCourseKeys, filterEnabled: candidate.filterEnabled };
+  return { selectedCourseKeys, filterEnabled: candidate.filterEnabled && selectedCourseKeys.length > 0 };
 }
 
 export function parseCourseFilter(value: string | null): CourseFilter {
