@@ -21,12 +21,17 @@ Danach ist Untiplan unter `http://localhost:3000` erreichbar.
 - Schulsuche nach Name, Ort oder Adresse mit automatischer Übernahme von Server und Login-Kürzel
 - zufällige, `HttpOnly`-/`SameSite`-geschützte App-Sitzung
 - AES-256-GCM-verschlüsselte WebUntis-Zugangsdaten im persistenten Server-Volume
-- Wochen- und Tagesstundenplan, Unterrichtsdetails und Ferieninformationen
+- Heute-, Wochen- und Tagesansicht mit echtem Zeitraster, aktueller Uhrzeit, Unterrichtsdetails und Ferieninformationen
 - Kennzeichnung von Ausfall, Vertretung, unregelmäßigem Unterricht und Veranstaltungen
+- kompakte Änderungsübersicht sowie optionale lokale Browser-Benachrichtigungen für neu erkannte Änderungen
 - automatische Kursliste aus Fach plus ursprünglicher Lehrkraft
 - mehrere gleichzeitig angemeldete Konten mit direktem Kontowechsel
 - je Konto getrennt im Browser gespeicherte Kursfilter, die erst bei der Abmeldung dieses Kontos gelöscht werden
-- responsive Oberfläche, Dark Mode, Web-App-Manifest und Service Worker
+- manueller und automatischer Refresh mit Aktualitäts- und Offline-Anzeige
+- optionaler AES-256-GCM-verschlüsselter Offline-Speicher mit nicht exportierbarem Geräteschlüssel
+- Kalender- und Bildexport, Druck/PDF, Systemfreigabe und reproduzierbare Links auf Woche und Stundenplan
+- responsive Oberfläche, Dark Mode, erweitertes Web-App-Manifest und Service Worker
+- automatisierte Logik-, Darstellungs- und UI-Interaktionstests
 - Docker Compose, Healthcheck, optionaler Cloudflare-Tunnel und automatisches GitHub-Deployment
 
 ## Lokal starten (Details)
