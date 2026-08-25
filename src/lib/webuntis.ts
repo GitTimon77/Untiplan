@@ -1,7 +1,7 @@
 import "server-only";
 import type { Holiday, Lesson, TimeGrid, TimetableElement, TimetableElementSelection, TimetableElementType } from "./types";
 import { normalizeWebUntisServer } from "./schools";
-import { defaultTimetableElement } from "./timetable-elements";
+import { defaultTimetableElement, sortTimetableElements } from "./timetable-elements";
 export type LoginInput = { server: string; school: string; username: string; password: string };
 type AuthResult = { sessionId: string; personId: number; personType: number; klasseId?: number; displayName?: string };
 type RpcResponse<T> = { result?: T; error?: { code: number; message: string; data?: unknown } };
@@ -84,8 +84,7 @@ export async function fetchTimetableElements(input: LoginInput, person: { person
     const elements = results.flatMap((result, index) => result.status === "fulfilled"
       ? result.value.flatMap(value => timetableElement(masterDataRequests[index].type, value) || [])
       : []);
-    const unique = [...new Map(elements.map(element => [`${element.type}:${element.id}`, element])).values()]
-      .sort((a,b) => a.type - b.type || (a.longname || a.name).localeCompare(b.longname || b.name, "de"));
+    const unique = sortTimetableElements([...new Map(elements.map(element => [`${element.type}:${element.id}`, element])).values()]);
     const defaultElement: TimetableElementSelection | null = unique[0] ? { id: unique[0].id, type: unique[0].type } : null;
     return { elements: unique, defaultElement };
   } finally {
