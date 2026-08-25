@@ -4,7 +4,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 type Credentials = { server: string; school: string; username: string; password: string };
-type StoredSession = { credentials: string; personId: number; personType: number; displayName?: string; accountIdentity?: string; createdAt: number; expiresAt: number };
+type StoredSession = { credentials: string; personId: number; personType: number; klasseId?: number; displayName?: string; accountIdentity?: string; createdAt: number; expiresAt: number };
 type StoredAccountGroup = { accounts: Record<string, string>; createdAt: number; expiresAt: number };
 type Store = { sessions: Record<string, StoredSession>; accountGroups: Record<string, StoredAccountGroup> };
 export type AccountSummary = { id: string; displayName: string; username: string; school: string; active: boolean };
@@ -22,6 +22,7 @@ async function load(): Promise<Store> {
       credentials: session.credentials,
       personId: session.personId,
       personType: session.personType,
+      klasseId: session.klasseId,
       displayName: session.displayName,
       accountIdentity: session.accountIdentity,
       createdAt: session.createdAt,
@@ -93,7 +94,7 @@ function summaries(group: StoredAccountGroup, store: Store, activeSessionId: str
 
 export async function createSession(
   credentials: Credentials,
-  person: { personId: number; personType: number; displayName?: string },
+  person: { personId: number; personType: number; klasseId?: number; displayName?: string },
   currentSessionToken?: string,
   accountGroupToken?: string,
 ) {
@@ -127,6 +128,7 @@ export async function createSession(
       credentials: encrypt(credentials),
       personId: person.personId,
       personType: person.personType,
+      klasseId: person.klasseId,
       displayName: person.displayName,
       accountIdentity: identity,
       createdAt: now,
