@@ -15,6 +15,7 @@
 
 .school-search-input-wrap input {
   padding-right: 44px;
+  font-size: 16px;
 }
 
 .search-spinner {
@@ -150,11 +151,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
-}
-
-/* Prevent iOS Safari from zooming the page when a login field receives focus. */
-.login-form input {
-  font-size: 16px;
 }
 
 @media (max-width: 560px) {
