@@ -67,7 +67,7 @@ export default function DatenschutzPage() {
       </section>
 
       <section>
-        <h2>{legal.useCloudflare ? "6" : "5"}. Sitzung, lokaler Kursfilter und App-Cache</h2>
+        <h2>{legal.useCloudflare ? "6" : "5"}. Sitzung, lokale Einstellungen und Offline-Speicher</h2>
         <div className="legal-table-wrap">
           <table>
             <thead>
@@ -90,8 +90,13 @@ export default function DatenschutzPage() {
                 <td>Bis du den Filter zurücksetzt, das zugehörige Konto abmeldest oder die Browserdaten löschst</td>
               </tr>
               <tr>
+                <td><code>untiplan.offline-timetable.v1.*</code> (Local Storage) und nicht exportierbarer Geräteschlüssel (IndexedDB)</td>
+                <td>Speichert nur nach deiner Aktivierung bereits geladene Stundenplanwochen AES-GCM-verschlüsselt für die Offline-Anzeige auf diesem Gerät</td>
+                <td>Bis du die Offline-Nutzung deaktivierst, das zugehörige Konto abmeldest oder die Browserdaten löschst</td>
+              </tr>
+              <tr>
                 <td>Cache Storage</td>
-                <td>Speichert öffentliche Seiten, Logo und Programmdateien für die installierbare Web-App; API-Antworten mit Stundenplandaten werden nicht gespeichert</td>
+                <td>Speichert Seitenhülle, öffentliche Seiten, Logo und Programmdateien für die installierbare Web-App; API-Antworten mit Stundenplandaten werden dort nicht gespeichert</td>
                 <td>Bis zur Aktualisierung der App oder zum Löschen der Browserdaten</td>
               </tr>
             </tbody>

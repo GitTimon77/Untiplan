@@ -1,6 +1,6 @@
 import type { TimetableElementSelection, TimetableElementType } from "./types";
 
-export type TimetableViewMode = "week" | "day";
+export type TimetableViewMode = "today" | "week" | "day";
 
 export function timetableSelectionStorageKey(filterStorageId: string) {
   return `untiplan.timetable-selection.v1.${filterStorageId}`;
@@ -32,7 +32,7 @@ export function serializeTimetableSelection(value: TimetableElementSelection) {
 }
 
 export function normalizeTimetableViewMode(value: unknown): TimetableViewMode {
-  return value === "day" ? "day" : "week";
+  return value === "today" || value === "day" ? value : "week";
 }
 
 export function parseTimetableViewMode(value: string | null): TimetableViewMode {
