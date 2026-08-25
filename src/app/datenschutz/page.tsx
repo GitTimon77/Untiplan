@@ -95,6 +95,11 @@ export default function DatenschutzPage() {
                 <td>Bis du die Offline-Nutzung deaktivierst, das zugehörige Konto abmeldest oder die Browserdaten löschst</td>
               </tr>
               <tr>
+                <td><code>untiplan.change-notifications.v1.*</code> und Änderungssignaturen (Local Storage)</td>
+                <td>Merkt sich nach deiner Aktivierung bekannte Änderungen, damit dein Browser neu hinzugekommene Ausfälle oder Vertretungen lokal melden kann; es findet kein Push-Versand an einen externen Dienst statt</td>
+                <td>Bis du Benachrichtigungen deaktivierst, das zugehörige Konto abmeldest oder die Browserdaten löschst</td>
+              </tr>
+              <tr>
                 <td>Cache Storage</td>
                 <td>Speichert Seitenhülle, öffentliche Seiten, Logo und Programmdateien für die installierbare Web-App; API-Antworten mit Stundenplandaten werden dort nicht gespeichert</td>
                 <td>Bis zur Aktualisierung der App oder zum Löschen der Browserdaten</td>
