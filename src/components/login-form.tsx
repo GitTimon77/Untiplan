@@ -259,7 +259,6 @@ export function LoginForm({ addingAccount = false }: { addingAccount?: boolean }
       <button className="primary" disabled={busy}>
         {busy ? "Verbindung wird geprüft …" : addingAccount ? "Konto hinzufügen" : "Sicher anmelden"}
       </button>
-      <small>Deine Zugangsdaten werden ausschließlich verschlüsselt auf diesem Server gespeichert.</small>
     </form>
   );
 }
