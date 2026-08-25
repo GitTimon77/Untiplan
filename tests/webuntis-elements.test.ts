@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fetchTimetableElements } from "../src/lib/webuntis";
+import { fetchTimetable, fetchTimetableElements } from "../src/lib/webuntis";
 
 test("discovers only master-data lists allowed by WebUntis", async () => {
   const originalFetch = global.fetch;
@@ -57,6 +57,88 @@ test("keeps the freshly authenticated student's own timetable when student lists
     );
     assert.deepEqual(response.elements, [{ id: 99, type: 5, name: "Eigener Stundenplan" }]);
     assert.deepEqual(response.defaultElement, { id: 99, type: 5 });
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("requests classes from the upcoming schoolyear when the selected week is between schoolyears", async () => {
+  const originalFetch = global.fetch;
+  let requestedSchoolyearId: number | undefined;
+  global.fetch = async (_input, init) => {
+    const request = JSON.parse(String(init?.body));
+    if (request.method === "getKlassen") requestedSchoolyearId = request.params.schoolyearId;
+    const result = request.method === "authenticate"
+      ? { sessionId: "test-session", personId: -1, personType: 13, klasseId: 0 }
+      : request.method === "getSchoolyears"
+        ? [
+            { id: 25, name: "2025/2026", startDate: 20250827, endDate: 20260719 },
+            { id: 26, name: "2026/2027", startDate: 20260831, endDate: 20270718 },
+          ]
+        : request.method === "getKlassen"
+          ? [{ id: 1781, name: "8E", longName: "Klasse 8E" }]
+          : request.method === "logout"
+            ? true
+            : undefined;
+    const body = result === undefined
+      ? { jsonrpc: "2.0", id: request.id, error: { code: -8509, message: "no rights" } }
+      : { jsonrpc: "2.0", id: request.id, result };
+    return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json", "set-cookie": "JSESSIONID=test-session; Path=/WebUntis" } });
+  };
+
+  try {
+    const response = await fetchTimetableElements(
+      { server: "school.webuntis.com", school: "school", username: "admin", password: "secret" },
+      { personId: -1, personType: 13, klasseId: 0 },
+      20260824,
+    );
+    assert.equal(requestedSchoolyearId, 26);
+    assert.deepEqual(response.elements, [{ id: 1781, type: 1, name: "8E", longname: "Klasse 8E" }]);
+    assert.deepEqual(response.defaultElement, { id: 1781, type: 1 });
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("returns an empty timetable instead of querying a week outside every schoolyear", async () => {
+  const originalFetch = global.fetch;
+  let timetableRequested = false;
+  let timeGridRequested = false;
+  let holidaysRequested = false;
+  global.fetch = async (_input, init) => {
+    const request = JSON.parse(String(init?.body));
+    if (request.method === "getTimetable") timetableRequested = true;
+    if (request.method === "getTimegridUnits") timeGridRequested = true;
+    if (request.method === "getHolidays") holidaysRequested = true;
+    const result = request.method === "authenticate"
+      ? { sessionId: "test-session", personId: -1, personType: 13, klasseId: 0 }
+      : request.method === "getSchoolyears"
+        ? [{ id: 26, name: "2026/2027", startDate: 20260831, endDate: 20270718 }]
+        : request.method === "getTimegridUnits" || request.method === "getHolidays"
+          ? []
+          : request.method === "getLatestImportTime"
+            ? 1787921441000
+            : request.method === "logout"
+              ? true
+              : undefined;
+    const body = result === undefined
+      ? { jsonrpc: "2.0", id: request.id, error: { code: -8509, message: "unexpected request" } }
+      : { jsonrpc: "2.0", id: request.id, result };
+    return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json", "set-cookie": "JSESSIONID=test-session; Path=/WebUntis" } });
+  };
+
+  try {
+    const response = await fetchTimetable(
+      { server: "school.webuntis.com", school: "school", username: "admin", password: "secret" },
+      { personId: 1781, personType: 1 },
+      20260824,
+      20260828,
+    );
+    assert.equal(timetableRequested, false);
+    assert.equal(timeGridRequested, false);
+    assert.equal(holidaysRequested, false);
+    assert.deepEqual(response.lessons, []);
+    assert.equal(response.schoolYear, "2026/2027");
   } finally {
     global.fetch = originalFetch;
   }
