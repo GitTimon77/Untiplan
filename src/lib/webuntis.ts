@@ -26,7 +26,7 @@ class WebUntisClient {
   async logout() { try { await this.rpc("logout"); } catch {} }
 }
 export async function verifyLogin(input: LoginInput) { const client = new WebUntisClient(input); try { return await client.authenticate(); } finally { await client.logout(); } }
-export async function fetchTimetable(input: LoginInput, person: { personId: number; personType: number }, startDate: number, endDate: number) { const client = new WebUntisClient(input); await client.authenticate(); try { const schoolYears=await client.schoolYears().catch(() => []); const schoolYear=schoolYears.find(value=>value.startDate<=endDate&&value.endDate>=startDate); const shouldLoadSchoolData=!schoolYears.length||Boolean(schoolYear); const [lessons,timeGrid,holidays,latestImportTime]=await Promise.all([shouldLoadSchoolData?client.timetable(person.personId,person.personType,startDate,endDate):Promise.resolve([]),shouldLoadSchoolData?client.timeGrid():Promise.resolve([]),shouldLoadSchoolData?client.holidays():Promise.resolve([]),client.latestImportTime()]); const displaySchoolYear=schoolYear||schoolYearForDate(schoolYears,startDate); return {lessons,timeGrid,holidays,...(displaySchoolYear?{schoolYear:displaySchoolYear.name}:{}),latestImportTime}; } finally { await client.logout(); } }
+export async function fetchTimetable(input: LoginInput, person: { personId: number; personType: number }, startDate: number, endDate: number) { const client = new WebUntisClient(input); await client.authenticate(); try { const schoolYears=await client.schoolYears().catch(() => []); const schoolYear=schoolYears.find(value=>value.startDate<=endDate&&value.endDate>=startDate); const shouldLoadSchoolData=!schoolYears.length||Boolean(schoolYear); const [lessons,timeGrid,holidays,latestImportTime]=await Promise.all([shouldLoadSchoolData?client.timetable(person.personId,person.personType,startDate,endDate):Promise.resolve([]),shouldLoadSchoolData?client.timeGrid().catch(()=>[]):Promise.resolve([]),shouldLoadSchoolData?client.holidays().catch(()=>[]):Promise.resolve([]),client.latestImportTime().catch(()=>undefined)]); const displaySchoolYear=schoolYear||schoolYearForDate(schoolYears,startDate); return {lessons,timeGrid,holidays,...(displaySchoolYear?{schoolYear:displaySchoolYear.name}:{}),...(latestImportTime?{latestImportTime}:{})}; } finally { await client.logout(); } }
 
 const masterDataRequests: Array<{ type: TimetableElementType; load: (client: WebUntisClient, schoolyearId?: number) => Promise<MasterDataElement[]> }> = [
   { type: 1, load: (client, schoolyearId) => client.klassen(schoolyearId) },
@@ -60,23 +60,33 @@ export async function fetchTimetableElements(input: LoginInput, person: { person
   const client = new WebUntisClient(input);
   const authenticatedPerson = await client.authenticate();
   try {
+    // A concrete person or class assignment is the account's own timetable.
+    // Master-data read rights alone do not mean that other timetables are allowed.
+    let own = defaultTimetableElement({
+      personId: authenticatedPerson.personId ?? person.personId,
+      personType: authenticatedPerson.personType ?? person.personType,
+      klasseId: authenticatedPerson.klasseId ?? person.klasseId,
+    });
+    if (own?.type === 1) {
+      const schoolYears = await client.schoolYears().catch(() => []);
+      const schoolYear = schoolYearForDate(schoolYears, targetDate);
+      const classes = schoolYear ? await client.klassen(schoolYear.id).catch(() => []) : [];
+      const accountName = input.username.trim().toLocaleLowerCase("de");
+      const assignedClass = classes.find(value => value.id === own?.id)
+        || classes.find(value => value.name?.trim().toLocaleLowerCase("de") === accountName);
+      if (assignedClass) own = { id: assignedClass.id, type: 1 };
+    }
+    if (own) return { elements: [{ ...own, name: "Eigener Stundenplan" }], defaultElement: own };
+
     const schoolYears = await client.schoolYears().catch(() => []);
     const schoolYear = schoolYearForDate(schoolYears, targetDate);
     const results = await Promise.allSettled(masterDataRequests.map(request => request.load(client, schoolYear?.id)));
     const elements = results.flatMap((result, index) => result.status === "fulfilled"
       ? result.value.flatMap(value => timetableElement(masterDataRequests[index].type, value) || [])
       : []);
-    // Authentication is authoritative here. Stored sessions created by an older
-    // app version may not contain the person's current timetable assignment.
-    const own = defaultTimetableElement({
-      personId: authenticatedPerson.personId ?? person.personId,
-      personType: authenticatedPerson.personType ?? person.personType,
-      klasseId: authenticatedPerson.klasseId ?? person.klasseId,
-    });
-    if (own && !elements.some(element => element.id === own.id && element.type === own.type)) elements.unshift({ ...own, name: "Eigener Stundenplan" });
     const unique = [...new Map(elements.map(element => [`${element.type}:${element.id}`, element])).values()]
       .sort((a,b) => a.type - b.type || (a.longname || a.name).localeCompare(b.longname || b.name, "de"));
-    const defaultElement: TimetableElementSelection | null = own || (unique[0] ? { id: unique[0].id, type: unique[0].type } : null);
+    const defaultElement: TimetableElementSelection | null = unique[0] ? { id: unique[0].id, type: unique[0].type } : null;
     return { elements: unique, defaultElement };
   } finally {
     await client.logout();
