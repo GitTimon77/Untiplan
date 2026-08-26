@@ -6,3 +6,6 @@ data/*.tmp
 .env
 !.env.example
 npm-debug.log*
+*.jks
+*.keystore
+keystore.properties

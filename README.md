@@ -52,7 +52,7 @@ npm run dev
 
 Lokale Sitzungsdaten werden im ignorierten Verzeichnis `data` gespeichert.
 
-Eine lokale Vorschau mit gültigen WebUntis-Beispieldaten ist im Entwicklungsmodus unter `http://localhost:3000/vorschau` verfügbar. Sie benötigt keine Anmeldung und ist in Produktions-Builds deaktiviert.
+Eine Vorschau mit vollständig synthetischen WebUntis-Beispieldaten ist unter `http://localhost:3000/vorschau` verfügbar. Sie benötigt keine Anmeldung und dient in Produktion zugleich als datenschutzfreundlicher Prüferzugang für Google Play.
 
 ## Umgebungsvariablen im Überblick
 
@@ -66,12 +66,18 @@ Eine lokale Vorschau mit gültigen WebUntis-Beispieldaten ist im Entwicklungsmod
 | `LEGAL_NAME`, `LEGAL_STREET`, `LEGAL_POSTAL_CODE`, `LEGAL_CITY`, `LEGAL_EMAIL` | öffentlich erforderlich | Mindestangaben für Impressum/Datenschutz bei öffentlicher Bereitstellung. |
 | `LEGAL_USE_CLOUDFLARE` | abhängig vom Betrieb | Muss zur tatsächlichen Bereitstellung passen (`true`/`false`). |
 | `LEGAL_HOSTING_PROVIDER`, `LEGAL_HOSTING_PRIVACY_URL` | bei externem Hoster erforderlich | Zusätzliche Pflichtangaben, wenn nicht ausschließlich über Cloudflare bereitgestellt wird. |
+| `ANDROID_PACKAGE_NAME` | für Google Play | Endgültiger Android-Paketname für Digital Asset Links. |
+| `ANDROID_SHA256_CERT_FINGERPRINTS` | für Google Play | Kommaseparierte SHA-256-Fingerabdrücke der Android-Zertifikate. |
 
 ## Rechtliche Angaben konfigurieren
 
 Impressum und Datenschutzerklärung sind unter `/impressum` und `/datenschutz` öffentlich erreichbar und in der gesamten App verlinkt. Vor einer öffentlichen Bereitstellung müssen in `.env` mindestens `LEGAL_NAME`, `LEGAL_STREET`, `LEGAL_POSTAL_CODE`, `LEGAL_CITY` und `LEGAL_EMAIL` gesetzt werden. Optionale Unternehmens-, Register- und Hosting-Angaben sind in `.env.example` dokumentiert.
 
 `LEGAL_USE_CLOUDFLARE` muss der tatsächlichen Bereitstellung entsprechen. Bei einem anderen externen Hoster sind außerdem `LEGAL_HOSTING_PROVIDER` und `LEGAL_HOSTING_PRIVACY_URL` zu ergänzen. Die Texte bilden die technische Funktionsweise dieses Projekts ab, ersetzen aber keine rechtliche Prüfung des konkreten Betriebsmodells.
+
+## Google Play
+
+Die aktuelle Richtlinienprüfung, der vorbereitete Store-Eintrag, der Data-Safety-Entwurf und der vollständige Ablauf für die Trusted Web Activity stehen in [PLAY_STORE_RELEASE.md](PLAY_STORE_RELEASE.md). Fertige Store-Grafiken liegen unter `play-store/assets`.
 
 ## Automatisch auf Ubuntu deployen
 

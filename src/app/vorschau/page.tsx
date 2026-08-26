@@ -1,10 +1,12 @@
-import { notFound } from "next/navigation";
 import { Dashboard } from "@/components/dashboard";
 import { sampleTimetable } from "@/lib/sample-timetable";
 
-export const metadata = { title: "Stundenplan-Vorschau" };
+export const metadata = {
+  title: "Stundenplan-Demo",
+  description: "Untiplan mit vollständig synthetischen Beispieldaten ausprobieren",
+  robots: { index: false, follow: false },
+};
 
 export default function PreviewPage() {
-  if (process.env.NODE_ENV !== "development") notFound();
   return <Dashboard displayName="Demo-Konto" filterStorageId="preview" initialWeek="2026-01-12" previewData={sampleTimetable} />;
 }

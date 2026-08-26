@@ -18,7 +18,7 @@ export default function DatenschutzPage() {
     <LegalShell
       eyebrow="Deine Daten"
       title="Datenschutzerklärung"
-      intro="Hier erfährst du verständlich, welche Daten Untiplan verarbeitet und warum. Stand: 25. August 2026."
+      intro="Hier erfährst du verständlich, welche Daten Untiplan verarbeitet und warum. Stand: 26. August 2026."
     >
       <section>
         <h2>1. Verantwortlicher</h2>
@@ -112,7 +112,8 @@ export default function DatenschutzPage() {
 
       <section>
         <h2>{legal.useCloudflare ? "7" : "6"}. Speicherdauer und Löschung</h2>
-        <p>Jede verschlüsselte Kontositzung ist höchstens {legal.sessionDays} Tage nutzbar. Bei der Abmeldung wird die Sitzung des aktuellen Kontos unmittelbar gelöscht; andere ausdrücklich hinzugefügte Konten bleiben angemeldet. Abgelaufene Sitzungen werden bei der weiteren Sitzungsverwaltung bereinigt. Vorübergehend verarbeitete Stundenplandaten werden nach Beantwortung der jeweiligen Anfrage nicht serverseitig gespeichert. Gesetzliche Aufbewahrungspflichten bleiben unberührt.</p>
+        <p>Jede verschlüsselte Kontositzung ist höchstens {legal.sessionDays} Tage nutzbar. Wenn du „Konto entfernen“ und anschließend „Konto und Daten löschen“ auswählst, wird die Sitzung des aktuellen Kontos einschließlich der verschlüsselten Zugangsdaten unmittelbar gelöscht; andere ausdrücklich hinzugefügte Konten bleiben angemeldet. Abgelaufene Sitzungen werden bei der weiteren Sitzungsverwaltung bereinigt. Vorübergehend verarbeitete Stundenplandaten werden nach Beantwortung der jeweiligen Anfrage nicht serverseitig gespeichert. Gesetzliche Aufbewahrungspflichten bleiben unberührt.</p>
+        <p>Eine Anleitung zur Löschung innerhalb der App und über die öffentlich erreichbare Web-Anwendung findest du unter <a href="/daten-loeschen">Daten löschen</a>. Das Entfernen aus Untiplan löscht nicht dein davon unabhängiges WebUntis-Konto; hierfür ist deine Schule beziehungsweise der WebUntis-Betreiber zuständig.</p>
       </section>
 
       <section>

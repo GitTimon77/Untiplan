@@ -7,8 +7,8 @@ export function SiteFooter() {
       <nav aria-label="Rechtliche Informationen">
         <Link href="/impressum">Impressum</Link>
         <Link href="/datenschutz">Datenschutz</Link>
+        <Link href="/daten-loeschen">Daten löschen</Link>
       </nav>
     </footer>
   );
 }
-
