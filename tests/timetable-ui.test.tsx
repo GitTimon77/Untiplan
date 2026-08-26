@@ -8,7 +8,13 @@ import type { Lesson } from "../src/lib/types";
 
 const dom=new JSDOM("<!doctype html><html><body></body></html>",{url:"https://untiplan.test/"});
 const globals=globalThis as unknown as Record<string,unknown>;
-globals.window=dom.window;globals.document=dom.window.document;globals.navigator=dom.window.navigator;globals.HTMLElement=dom.window.HTMLElement;globals.Node=dom.window.Node;globals.KeyboardEvent=dom.window.KeyboardEvent;globals.MouseEvent=dom.window.MouseEvent;globals.getComputedStyle=dom.window.getComputedStyle;globals.IS_REACT_ACT_ENVIRONMENT=true;
+globals.window=dom.window;globals.document=dom.window.document;
+Object.defineProperty(globals,"navigator",{
+  configurable:true,
+  value:dom.window.navigator,
+  writable:true,
+});
+globals.HTMLElement=dom.window.HTMLElement;globals.Node=dom.window.Node;globals.KeyboardEvent=dom.window.KeyboardEvent;globals.MouseEvent=dom.window.MouseEvent;globals.getComputedStyle=dom.window.getComputedStyle;globals.IS_REACT_ACT_ENVIRONMENT=true;
 
 async function testing(){const library=await import("@testing-library/react");const user=(await import("@testing-library/user-event")).default.setup();return {...library,user}}
 
