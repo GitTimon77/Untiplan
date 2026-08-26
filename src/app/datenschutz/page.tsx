@@ -122,6 +122,11 @@ export default function DatenschutzPage() {
         <p>Eine ausschließlich automatisierte Entscheidung mit rechtlicher oder ähnlich erheblicher Wirkung und ein Profiling finden nicht statt.</p>
         <p>Für Datenschutzanfragen erreichst du den Verantwortlichen unter {emailConfigured ? <a href={`mailto:${operator.email}`}>{operator.email}</a> : operator.email}.</p>
       </section>
+
+      <section>
+        <h2>{legal.useCloudflare ? "9" : "8"}. Zielgruppe</h2>
+        <p>Untiplan richtet sich an Nutzerinnen und Nutzer ab 16 Jahren. Das Angebot ist nicht an Kinder unter 16 Jahren gerichtet.</p>
+      </section>
     </LegalShell>
   );
 }

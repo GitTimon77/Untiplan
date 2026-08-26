@@ -8,7 +8,7 @@ function fingerprints() {
 }
 
 export async function GET() {
-  const packageName = (process.env.ANDROID_PACKAGE_NAME || "de.untiplan.app").trim();
+  const packageName = (process.env.ANDROID_PACKAGE_NAME || "dev.timonring.untiplan").trim();
   const sha256CertFingerprints = fingerprints();
   const statements = sha256CertFingerprints.length ? [{
     relation: ["delegate_permission/common.handle_all_urls"],

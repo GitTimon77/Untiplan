@@ -1,0 +1,54 @@
+{
+  "packageId": "dev.timonring.untiplan",
+  "host": "untiplan.timonring.dev",
+  "name": "Untiplan",
+  "launcherName": "Untiplan",
+  "display": "standalone",
+  "themeColor": "#3457D5",
+  "themeColorDark": "#10141D",
+  "navigationColor": "#F5F7FB",
+  "navigationColorDark": "#10141D",
+  "navigationDividerColor": "#DFE4EE",
+  "navigationDividerColorDark": "#2D3647",
+  "backgroundColor": "#F5F7FB",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://untiplan.timonring.dev/icons/icon-512.png",
+  "maskableIconUrl": "https://untiplan.timonring.dev/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Stundenplan öffnen",
+      "shortName": "Stundenplan",
+      "url": "https://untiplan.timonring.dev/stundenplan",
+      "chosenIconUrl": "https://untiplan.timonring.dev/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://untiplan.timonring.dev/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://untiplan.timonring.dev/",
+  "minSdkVersion": 21,
+  "orientation": "any",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1.0.0"
+}
