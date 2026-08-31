@@ -26,7 +26,7 @@ Die PWA-Seite ist vorbereitet:
 
 Das TWA-Projekt wurde mit Bubblewrap 1.25.0 unter `android/` erzeugt. Es verwendet `dev.timonring.untiplan`, Version `1.0.0`/Code `1`, `compileSdkVersion 36`, `targetSdkVersion 36` und die produktive Domain. Es fordert ausschließlich `POST_NOTIFICATIONS` für die optionale Benachrichtigungsfunktion an; Standort, Werbe-ID, Kontakte, Kamera, Mikrofon und Abrechnung sind nicht enthalten.
 
-Der unsignierte Kontrollbuild ist bis zur Android-SDK-Lizenz vorbereitet. Die SDK-Lizenz wurde nicht stellvertretend akzeptiert. Nach ausdrücklicher Zustimmung muss der Build erneut gestartet werden; anschließend wird separat ein sicher aufzubewahrender Upload-Schlüssel erzeugt.
+Die Android-SDK-Lizenz wurde nach ausdrücklicher Zustimmung angenommen. Der unsignierte Kontrollbuild war erfolgreich; erzeugt wurden `android/app-release-unsigned-aligned.apk` und `android/app/build/outputs/bundle/release/app-release.aab`. Als nächster Schritt wird separat ein sicher aufzubewahrender Upload-Schlüssel erzeugt und das endgültige Bundle signiert.
 
 Nach Festlegung der produktiven URL:
 
@@ -39,7 +39,7 @@ Nach Festlegung der produktiven URL:
 7. Nach Aktivierung von Play App Signing zusätzlich den Fingerabdruck des **App-Signing-Zertifikats aus Play Console → App-Integrität** eintragen. Beide Werte dürfen kommasepariert vorhanden sein.
 8. `https://untiplan.timonring.dev/.well-known/assetlinks.json` öffentlich, ohne Login und ohne Weiterleitung testen. Erst danach das `.aab` in einen internen Test hochladen.
 
-Der lokale Rechner hat derzeit Java, aber noch kein Android SDK. Das eigentliche `.aab` wird daher erst nach Festlegung der Domain sowie Installation von Android Studio/SDK erzeugt.
+Java sowie die benötigten Android-36-SDK-Komponenten sind lokal eingerichtet. Der reproduzierbare, unsignierte `.aab`-Kontrollbuild wurde am 26. August 2026 erfolgreich abgeschlossen.
 
 ## Play-Console-Angaben
 
