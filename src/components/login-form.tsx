@@ -24,7 +24,7 @@ export function LoginForm({ addingAccount = false }: { addingAccount?: boolean }
 
   useEffect(() => {
     const search = query.trim();
-    if (mode !== "search" || selectedSchool || search.length < 2) {
+    if (mode !== "search" || selectedSchool || search.length < 3) {
       return;
     }
 
@@ -162,14 +162,14 @@ export function LoginForm({ addingAccount = false }: { addingAccount?: boolean }
                 setError("");
               }}
               onFocus={() => {
-                if (!selectedSchool && query.trim().length >= 2 && hasSearched) setListOpen(true);
+                if (!selectedSchool && query.trim().length >= 3 && hasSearched) setListOpen(true);
               }}
               onKeyDown={handleSearchKeyDown}
               required
             />
             {searching && <span className="search-spinner" aria-label="Schule wird gesucht" />}
           </div>
-          <small className="school-search-hint">Tippe mindestens zwei Zeichen und wähle deine Schule aus.</small>
+          <small className="school-search-hint">Tippe mindestens drei Zeichen und wähle deine Schule aus.</small>
 
           {selectedSchool && (
             <div className="selected-school" aria-live="polite">
