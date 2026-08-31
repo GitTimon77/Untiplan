@@ -15,6 +15,7 @@ function lesson(id:number,date:number,startTime:number,endTime:number,subjectId:
 export const sampleLessons:Lesson[] = [
   lesson(1,20260112,800,845,201,"MAT","Mathematik",301,"LEH1","Lehrkraft 1",401,"R-101","Raum 101","11A-MAT"),
   { ...lesson(2,20260112,900,945,202,"DEU","Deutsch",302,"LEH2","Lehrkraft 2",402,"R-102","Raum 102","11A-DEU"), code:"cancelled", substText:"Unterricht entfällt" },
+  { ...lesson(11,20260112,1000,1045,203,"ENG","Englisch",303,"LEH3","Lehrkraft 3",403,"R-103","Raum 103","11A-ENG"), code:"cancelled", substText:"Unterricht entfällt" },
   lesson(3,20260113,800,845,203,"ENG","Englisch",303,"LEH3","Lehrkraft 3",403,"R-103","Raum 103","11A-ENG"),
   { ...lesson(4,20260113,1000,1045,204,"SPO","Sport",304,"LEH4","Lehrkraft 4",404,"HAL-A","Sporthalle A","11A-SPO"), ro:[{id:409,name:"HAL-B",longname:"Sporthalle B",orgid:404,orgname:"Sporthalle A"}], substText:"Hallenwechsel" },
   lesson(5,20260114,900,945,205,"NAT","Naturwissenschaften",305,"LEH5","Lehrkraft 5",405,"LAB-A","Labor A","Kurs-NAT",gemeinsamerKurs),
