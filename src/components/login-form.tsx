@@ -9,8 +9,10 @@ type SearchResponse = { schools?: SchoolSearchResult[]; error?: string };
 export function LoginForm({ addingAccount = false }: { addingAccount?: boolean }) {
   const router = useRouter();
   const listboxId = useId();
+  const passwordId = useId();
   const searchFieldRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"search" | "manual">("search");
   const [query, setQuery] = useState("");
@@ -250,10 +252,26 @@ export function LoginForm({ addingAccount = false }: { addingAccount?: boolean }
           Benutzername
           <input name="username" autoComplete="username" required />
         </label>
-        <label>
-          Passwort
-          <input name="password" type="password" autoComplete="current-password" required />
-        </label>
+        <div className="password-field">
+          <label htmlFor={passwordId}>Passwort</label>
+          <div className="password-input-wrap">
+            <input id={passwordId} name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required />
+            <button
+              className="password-toggle"
+              type="button"
+              aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+              aria-controls={passwordId}
+              title={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+              onClick={() => setShowPassword(current => !current)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                <circle cx="12" cy="12" r="3" />
+                {showPassword && <path d="m3 3 18 18" />}
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
       {error && <p className="error" role="alert">{error}</p>}
       <button className="primary" disabled={busy}>
