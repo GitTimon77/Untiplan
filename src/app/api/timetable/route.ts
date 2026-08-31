@@ -4,7 +4,7 @@ import { deriveCourses } from "@/lib/courses";
 import { addDays, parseWeek, toUntisDate } from "@/lib/date";
 import { errorResponse, SESSION_COOKIE } from "@/lib/http";
 import { getSession } from "@/lib/store";
-import { fetchTimetable } from "@/lib/webuntis";
+import { fetchTimetable, TimetableDisplayBlockedError } from "@/lib/webuntis";
 import { defaultTimetableElement, isTimetableElementType } from "@/lib/timetable-elements";
 
 type TimetableElementSelection = {
@@ -65,6 +65,12 @@ export async function GET(request: NextRequest) {
       range: { startDate, endDate },
     });
   } catch (error) {
+    if (error instanceof TimetableDisplayBlockedError) {
+      return NextResponse.json(
+        { error: error.message, code: "TIMETABLE_DISPLAY_BLOCKED" },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
     return errorResponse(error, "Stundenplan konnte nicht geladen werden.", 502);
   }
 }

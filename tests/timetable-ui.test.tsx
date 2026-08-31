@@ -5,10 +5,14 @@ import { JSDOM } from "jsdom";
 import { FilterDialog } from "../src/components/dashboard-dialogs";
 import { DayColumn, TodayOverview } from "../src/components/timetable-views";
 import type { Lesson } from "../src/lib/types";
+import { Dashboard } from "../src/components/dashboard";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { offlineTimetableCacheKey, offlineTimetablePreferenceKey } from "../src/lib/offline-timetable";
+import { timetableViewModeStorageKey } from "../src/lib/local-timetable";
 
 const dom=new JSDOM("<!doctype html><html><body></body></html>",{url:"https://untiplan.test/"});
 const globals=globalThis as unknown as Record<string,unknown>;
-globals.window=dom.window;globals.document=dom.window.document;
+globals.window=dom.window;globals.document=dom.window.document;globals.self=dom.window;
 Object.defineProperty(globals,"navigator",{
   configurable:true,
   value:dom.window.navigator,
@@ -40,4 +44,46 @@ test("today overview explains a weekend without lessons",async()=>{
   const {render,screen,cleanup}=await testing();
   render(<TodayOverview lessons={[]} date={new Date(2026,0,11)} holidays={[]} bounds={{start:480,end:600}} now={new Date(2026,0,11,10)} onSelect={()=>{}}/>);
   assert.ok(screen.getByText("Heute ist kein regulärer Unterrichtstag."));cleanup();
+});
+
+test("a display restriction removes old lessons and offline data, then recovers when released",async()=>{
+  const {render,screen,cleanup,user,waitFor}=await testing();
+  const originalFetch=global.fetch;
+  const selection={type:1 as const,id:101};
+  const cacheKey=offlineTimetableCacheKey("blocked-test","2026-08-31",selection);
+  const oldLocalStorage=Object.getOwnPropertyDescriptor(globalThis,"localStorage");
+  Object.defineProperty(globalThis,"localStorage",{configurable:true,value:window.localStorage});
+  window.localStorage.clear();
+  window.history.replaceState(null,"","/");
+  window.localStorage.setItem(offlineTimetablePreferenceKey("blocked-test"),"true");
+  window.localStorage.setItem(timetableViewModeStorageKey("blocked-test"),'"week"');
+  let blocked=false;
+  const router={bfcacheId:"test",back(){},forward(){},refresh(){},push(){},replace(){},prefetch:async()=>{}};
+  global.fetch=async input=>String(input).startsWith("/api/timetable/elements")
+    ? Response.json({elements:[{...selection,name:"Testklasse"}],defaultElement:selection})
+    : blocked
+      ? Response.json({error:"Anzeige gesperrt",code:"TIMETABLE_DISPLAY_BLOCKED"},{status:403})
+      : Response.json({lessons:[{id:1,date:20260831,startTime:800,endTime:845,su:[{id:1,name:"TESTFACH"}]}],courses:[],holidays:[],timeGrid:[],range:{startDate:20260831,endDate:20260904}});
+  try {
+    render(<AppRouterContext.Provider value={router}><Dashboard displayName="Testkonto" filterStorageId="blocked-test" initialWeek="2026-08-31" defaultElement={selection}/></AppRouterContext.Provider>);
+    await user.click(screen.getByRole("tab",{name:"Woche"}));
+    await screen.findByRole("button",{name:/TESTFACH/});
+    await waitFor(()=>assert.equal(screen.getByRole("button",{name:"Stundenplan aktualisieren"}).hasAttribute("disabled"),false));
+    window.localStorage.setItem(cacheKey,"previous encrypted cache");
+    blocked=true;
+    await user.click(screen.getByRole("button",{name:"Stundenplan aktualisieren"}));
+    await screen.findByRole("heading",{name:"Anzeige gesperrt"});
+    assert.equal(screen.queryByRole("button",{name:/TESTFACH/}),null);
+    assert.equal(screen.queryByText("Gespeicherter Stand"),null);
+    assert.equal(window.localStorage.getItem(cacheKey),null);
+    assert.equal(screen.getByRole("menuitem",{name:"Als Bild speichern"}).hasAttribute("disabled"),true);
+    blocked=false;
+    await user.click(screen.getByRole("button",{name:"Stundenplan aktualisieren"}));
+    await screen.findByRole("button",{name:/TESTFACH/});
+    assert.equal(screen.queryByRole("heading",{name:"Anzeige gesperrt"}),null);
+  } finally {
+    cleanup();global.fetch=originalFetch;window.localStorage.clear();
+    if(oldLocalStorage)Object.defineProperty(globalThis,"localStorage",oldLocalStorage);
+    else Reflect.deleteProperty(globalThis,"localStorage");
+  }
 });

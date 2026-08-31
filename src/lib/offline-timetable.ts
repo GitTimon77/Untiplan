@@ -12,6 +12,10 @@ export function offlineTimetableCacheKey(filterStorageId:string,week:string,sele
   return `${CACHE_PREFIX}.${filterStorageId}.${week}.${selection.type}-${selection.id}`;
 }
 
+export function removeOfflineTimetable(filterStorageId:string,week:string,selection:TimetableElementSelection) {
+  localStorage.removeItem(offlineTimetableCacheKey(filterStorageId,week,selection));
+}
+
 function database() {
   return new Promise<IDBDatabase>((resolve,reject)=>{
     const request=indexedDB.open(DB_NAME,1);

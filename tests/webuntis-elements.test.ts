@@ -1,6 +1,48 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fetchTimetable, fetchTimetableElements } from "../src/lib/webuntis";
+import { fetchTimetable, fetchTimetableElements, TimetableDisplayBlockedError } from "../src/lib/webuntis";
+
+test("reports a denied timetable date as a display restriction and logs out", async () => {
+  const originalFetch = global.fetch;
+  const methods: string[] = [];
+  global.fetch = async (_input, init) => {
+    const request = JSON.parse(String(init?.body));
+    methods.push(request.method);
+    const body = request.method === "getTimetable"
+      ? { error: { code: -7004, message: "no allowed date" } }
+      : { result: request.method === "authenticate"
+          ? { sessionId: "test-session", personId: 101, personType: 1 }
+          : request.method === "getSchoolyears"
+            ? [{ id: 1, name: "Testjahr", startDate: 20260831, endDate: 20270718 }]
+            : true };
+    return Response.json(body);
+  };
+  try {
+    await assert.rejects(fetchTimetable(
+      { server: "tenant.webuntis.com", school: "test-school", username: "test-user", password: "test-password" },
+      { personId: 101, personType: 1 }, 20260831, 20260904,
+    ), error => error instanceof TimetableDisplayBlockedError && error.message === "Anzeige gesperrt");
+    assert.deepEqual(methods, ["authenticate", "getSchoolyears", "getTimetable", "logout"]);
+  } finally { global.fetch = originalFetch; }
+});
+
+test("does not mislabel other timetable errors as a date restriction", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (_input, init) => {
+    const request = JSON.parse(String(init?.body));
+    return Response.json(request.method === "getTimetable"
+      ? { error: { code: -8509, message: "no rights" } }
+      : { result: request.method === "authenticate"
+          ? { sessionId: "test-session", personId: 101, personType: 1 }
+          : [] });
+  };
+  try {
+    await assert.rejects(fetchTimetable(
+      { server: "tenant.webuntis.com", school: "test-school", username: "test-user", password: "test-password" },
+      { personId: 101, personType: 1 }, 20260831, 20260904,
+    ), error => error instanceof Error && !(error instanceof TimetableDisplayBlockedError) && error.message === "no rights");
+  } finally { global.fetch = originalFetch; }
+});
 
 test("discovers only master-data lists allowed by WebUntis", async () => {
   const originalFetch = global.fetch;

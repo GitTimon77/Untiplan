@@ -1,13 +1,13 @@
 "use client";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Course, Lesson, TimetableElement, TimetableElementSelection, TimetableElementType, TimetablePayload } from "@/lib/types";
 import { addDays, isoDate, mondayFor } from "@/lib/date";
 import { applyCourseFilter } from "@/lib/courses";
 import { courseFilterStorageKey, LEGACY_COURSE_FILTER_STORAGE_KEY, normalizeCourseFilter, parseCourseFilter, serializeCourseFilter, type CourseFilter } from "@/lib/local-filters";
 import { parseTimetableSelection, parseTimetableViewMode, serializeTimetableSelection, serializeTimetableViewMode, timetableSelectionStorageKey, timetableViewModeStorageKey, type TimetableViewMode } from "@/lib/local-timetable";
-import { clearOfflineTimetables, offlineTimetablePreferenceKey, readOfflineTimetable, saveOfflineTimetable } from "@/lib/offline-timetable";
+import { clearOfflineTimetables, offlineTimetablePreferenceKey, readOfflineTimetable, removeOfflineTimetable, saveOfflineTimetable } from "@/lib/offline-timetable";
 import { changeSnapshot, newChanges, notificationPreferenceKey, notificationSnapshotKey } from "@/lib/change-notifications";
 import { downloadBlob, timetablePng } from "@/lib/timetable-export";
 import { sortTimetableElements, timetableElementLabel } from "@/lib/timetable-elements";
@@ -42,6 +42,8 @@ export function Dashboard({displayName,filterStorageId,initialWeek,previewData,d
  const [logoutError,setLogoutError]=useState("");
  const [busy,setBusy]=useState(!previewData&&Boolean(defaultElement));
  const [error,setError]=useState("");
+ const [displayBlocked,setDisplayBlocked]=useState(false);
+ const loadRequestId=useRef(0);
  const [offlineEnabled,setOfflineEnabled]=useState(false);
  const [isOnline,setIsOnline]=useState(true);
  const [isOfflineData,setIsOfflineData]=useState(false);
@@ -57,21 +59,33 @@ export function Dashboard({displayName,filterStorageId,initialWeek,previewData,d
  const load=useCallback(async(signal?:AbortSignal)=>{
   if(previewData){setData(previewData);setLastUpdated(Date.now());setBusy(false);return}
   if(!selectedElement){setBusy(false);return}
-  setBusy(true);setError("");
+  const requestId=++loadRequestId.current;
+  const isStale=()=>signal?.aborted||requestId!==loadRequestId.current;
+  setBusy(true);setError("");setDisplayBlocked(false);
   try {
    const response=await fetch(`/api/timetable?week=${isoDate(week)}&elementType=${selectedElement.type}&elementId=${selectedElement.id}`,{cache:"no-store",signal});
-   const body=await response.json() as TimetablePayload&{error?:string};
+   const body=await response.json() as TimetablePayload&{error?:string;code?:string};
+   if(isStale())return;
    if(response.status===401){router.replace("/login");return}
+   if(response.status===403){
+    // A server restriction takes precedence over both visible and saved data.
+    setData(null);setSelected(null);setIsOfflineData(false);setLastUpdated(null);
+    setDisplayBlocked(body.code==="TIMETABLE_DISPLAY_BLOCKED");
+    setError(body.error||"Dieser Stundenplan wurde nicht freigegeben.");
+    try{removeOfflineTimetable(filterStorageId,isoDate(week),selectedElement)}catch{}
+    return;
+   }
    if(!response.ok)throw new Error(body.error);
    setData(body);setIsOfflineData(false);setLastUpdated(Date.now());
    if(offlineEnabled)await saveOfflineTimetable(filterStorageId,isoDate(week),selectedElement,body).catch(()=>{});
-   if(signal?.aborted)return;
+   if(isStale())return;
    if(notificationsEnabled&&typeof Notification!=="undefined")try{const snapshotKey=notificationSnapshotKey(filterStorageId,isoDate(week),selectedElement);const previousRaw=window.localStorage.getItem(snapshotKey);const previous=previousRaw?JSON.parse(previousRaw) as string[]:[];const fresh=applyCourseFilter(newChanges(previous,body.lessons),courseFilter.selectedCourseKeys,courseFilter.filterEnabled);window.localStorage.setItem(snapshotKey,JSON.stringify(changeSnapshot(body.lessons)));if(previousRaw&&fresh.length&&Notification.permission==="granted")new Notification(fresh.length===1?"Neue Stundenplanänderung":`${fresh.length} neue Stundenplanänderungen`,{body:fresh.slice(0,3).map(lesson=>`${names(lesson.su)}: ${lessonChangeSummary(lesson)}`).join("\n"),tag:`untiplan-${filterStorageId}`})}catch{}
   } catch(e) {
-   if(signal?.aborted)return;
+   if(isStale())return;
    const cached=offlineEnabled?await readOfflineTimetable(filterStorageId,isoDate(week),selectedElement).catch(()=>null):null;
-   if(cached){setData(cached.data);setLastUpdated(cached.savedAt);setIsOfflineData(true);setError("")}else setError(e instanceof Error?e.message:"Stundenplan konnte nicht geladen werden.");
-  } finally {if(!signal?.aborted)setBusy(false)}
+   if(isStale())return;
+   if(cached){setData(cached.data);setLastUpdated(cached.savedAt);setIsOfflineData(true);setError("")}else{setData(null);setSelected(null);setIsOfflineData(false);setLastUpdated(null);setError(e instanceof Error?e.message:"Stundenplan konnte nicht geladen werden.")}
+  } finally {if(!isStale())setBusy(false)}
  },[week,router,previewData,selectedElement,offlineEnabled,filterStorageId,notificationsEnabled,courseFilter]);
  useEffect(()=>{if(previewData)return;let ignore=false;(async()=>{setElementsBusy(true);setElementsError("");try{const response=await fetch(`/api/timetable/elements?date=${isoDate(week)}`,{cache:"no-store"});const body=await response.json();if(response.status===401){router.replace("/login");return}if(!response.ok)throw new Error(body.error);if(ignore)return;const discovered:TimetableElement[]=body.elements||[];const responseDefault:TimetableElementSelection|null=body.defaultElement||null;const complete=responseDefault&&!discovered.some(element=>element.id===responseDefault.id&&element.type===responseDefault.type)?[{...responseDefault,name:"Eigener Stundenplan"},...discovered]:discovered;const next=sortTimetableElements(complete);const stored=(()=>{try{return parseTimetableSelection(window.localStorage.getItem(selectionStorageKey))}catch{return null}})();const params=new URLSearchParams(window.location.search);const linked=parseTimetableSelection(JSON.stringify({type:Number(params.get("elementType")),id:Number(params.get("elementId"))}));setTimetableElements(next);setSelectedElement(current=>[linked,stored,current,responseDefault].find(candidate=>candidate&&next.some(element=>element.id===candidate.id&&element.type===candidate.type))||null)}catch(requestError){if(!ignore)setElementsError(requestError instanceof Error?requestError.message:"Verfügbare Stundenpläne konnten nicht geladen werden.")}finally{if(!ignore)setElementsBusy(false)}})();return()=>{ignore=true}},[previewData,router,selectionStorageKey,week]);
  // The effect synchronizes the selected week with the remote timetable API.
@@ -130,6 +144,6 @@ export function Dashboard({displayName,filterStorageId,initialWeek,previewData,d
  {!previewData&&elementsError&&<p className="plan-picker-message error">{elementsError}</p>}
  {!previewData&&!elementsBusy&&!elementsError&&!timetableElements.length&&<p className="plan-picker-message muted">Für dieses Konto wurden keine auswählbaren Stundenpläne freigegeben.</p>}
  {previewData&&<div className="preview-notice"><b>Lokale Vorschau</b><span>Beispieldaten aus der gültigen WebUntis-Antwort · keine echte Abfrage</span></div>}
- {error&&<div className="notice error">{error}<button onClick={()=>load()}>Erneut versuchen</button></div>} {busy||elementsBusy&&!data?<div className="loader">Stundenplan wird geladen …</div>:!previewData&&!selectedElement?<div className="empty">Kein Stundenplan ausgewählt.</div>:mode==="today"?<TodayOverview lessons={todayLessons} date={overviewDate} holidays={previewData||currentWeek?data?.holidays||[]:[]} bounds={timelineBounds} now={new Date(clock)} onSelect={setSelected}/>:mode==="week"?<WeekView week={week} lessonsByDay={lessonsByDay} holidays={data?.holidays||[]} bounds={timelineBounds} now={new Date(clock)} onSelect={setSelected}/>:<><div className="day-tabs" role="tablist" aria-label="Wochentag auswählen">{weekDays.map((label,i)=><button key={label} role="tab" aria-selected={day===i} aria-label={label} className={day===i?"active":""} onClick={()=>setDay(i)}>{label.slice(0,2)}</button>)}</div><div className="day-view"><DayColumn label={weekDays[day]} date={addDays(week,day)} lessons={lessonsByDay[day]} holidays={data?.holidays||[]} bounds={timelineBounds} now={new Date(clock)} onSelect={setSelected}/></div></>}
+ {error&&!displayBlocked&&<div className="notice error" role="alert">{error}<button onClick={()=>load()}>Erneut versuchen</button></div>} {busy||elementsBusy&&!data?<div className="loader">Stundenplan wird geladen …</div>:displayBlocked?<div className="empty" role="alert"><h2>Anzeige gesperrt</h2><p>Die Schule hat den Stundenplan für diesen Zeitraum in WebUntis nicht freigegeben.</p></div>:error&&!data?null:!previewData&&!selectedElement?<div className="empty">Kein Stundenplan ausgewählt.</div>:mode==="today"?<TodayOverview lessons={todayLessons} date={overviewDate} holidays={previewData||currentWeek?data?.holidays||[]:[]} bounds={timelineBounds} now={new Date(clock)} onSelect={setSelected}/>:mode==="week"?<WeekView week={week} lessonsByDay={lessonsByDay} holidays={data?.holidays||[]} bounds={timelineBounds} now={new Date(clock)} onSelect={setSelected}/>:<><div className="day-tabs" role="tablist" aria-label="Wochentag auswählen">{weekDays.map((label,i)=><button key={label} role="tab" aria-selected={day===i} aria-label={label} className={day===i?"active":""} onClick={()=>setDay(i)}>{label.slice(0,2)}</button>)}</div><div className="day-view"><DayColumn label={weekDays[day]} date={addDays(week,day)} lessons={lessonsByDay[day]} holidays={data?.holidays||[]} bounds={timelineBounds} now={new Date(clock)} onSelect={setSelected}/></div></>}
  {filtersOpen&&data&&<FilterDialog courseFilter={courseFilter} courseOptions={courseOptions} visibleCourseOptions={visibleCourseOptions} courseSearch={courseSearch} setCourseSearch={setCourseSearch} saveFilters={saveFilters} offlineEnabled={offlineEnabled} updateOffline={updateOffline} notificationsEnabled={notificationsEnabled} updateNotifications={updateNotifications} close={()=>setFiltersOpen(false)}/>}
   {selected&&<LessonDialog lesson={selected} close={()=>setSelected(null)}/>} {accountsOpen&&<AccountDialog accounts={accounts} loading={accountsBusy} switchingAccountId={switchingAccountId} error={accountsError} close={()=>{if(!switchingAccountId)setAccountsOpen(false)}} switchAccount={switchToAccount}/>} {logoutOpen&&<LogoutDialog accountName={displayName} close={closeLogout} confirm={logout} busy={logoutBusy} error={logoutError}/>}</main><SiteFooter /></div> }
