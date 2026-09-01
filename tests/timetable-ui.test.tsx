@@ -9,6 +9,7 @@ import { Dashboard } from "../src/components/dashboard";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { offlineTimetableCacheKey, offlineTimetablePreferenceKey } from "../src/lib/offline-timetable";
 import { timetableViewModeStorageKey } from "../src/lib/local-timetable";
+import { MessagesInbox } from "../src/components/messages-inbox";
 
 const dom=new JSDOM("<!doctype html><html><body></body></html>",{url:"https://untiplan.test/"});
 const globals=globalThis as unknown as Record<string,unknown>;
@@ -66,6 +67,20 @@ test("today messages remain available when the timetable is unavailable",async()
   assert.ok(screen.getByText("Vertretungsinfo"));
   assert.ok(screen.getByRole("alert",{name:""}));
   assert.ok(screen.getByText("Der Stundenplan ist derzeit nicht verfügbar."));
+  cleanup();
+});
+
+test("the WebUntis inbox is searchable and expands independently from daily news",async()=>{
+  const {render,screen,cleanup,user}=await testing();
+  render(<MessagesInbox messages={[{id:7,subject:"Schulmusical-Termine",contentPreview:"Ankündigung für nächste Woche",senderName:"Admin_2",sentDateTime:"2026-09-01T09:00:00",isRead:false,hasAttachments:false},{id:8,subject:"Gottesdienst",contentPreview:"Erinnerung",senderName:"MOR",sentDateTime:"2026-08-30T10:00:00",isRead:true,hasAttachments:false}]} busy={false} error="" sourceUrl="" retry={()=>{}}/>);
+  assert.ok(screen.getByRole("heading",{name:"Mitteilungen"}));
+  assert.equal(screen.queryByRole("heading",{name:"Nachrichten zum Tag"}),null);
+  assert.ok(screen.getByLabelText("Ungelesen"));
+  await user.type(screen.getByRole("searchbox",{name:"Mitteilungen durchsuchen"}),"Admin");
+  assert.ok(screen.getByText("Schulmusical-Termine"));
+  assert.equal(screen.queryByText("Gottesdienst"),null);
+  await user.click(screen.getByText("Schulmusical-Termine"));
+  assert.equal(screen.getAllByText("Ankündigung für nächste Woche").length,2);
   cleanup();
 });
 

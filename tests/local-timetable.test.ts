@@ -20,6 +20,7 @@ test("local timetable view mode survives serialization", () => {
   assert.equal(parseTimetableViewMode(serializeTimetableViewMode("week")), "week");
   assert.equal(parseTimetableViewMode(serializeTimetableViewMode("day")), "day");
   assert.equal(parseTimetableViewMode(serializeTimetableViewMode("today")), "today");
+  assert.equal(parseTimetableViewMode(serializeTimetableViewMode("messages")), "messages");
 });
 
 test("invalid local timetable selections are rejected", () => {

@@ -1,8 +1,9 @@
 import "server-only";
-import type { Holiday, Lesson, MessagesOfDayPayload, TimeGrid, TimetableElement, TimetableElementSelection, TimetableElementType } from "./types";
+import type { Holiday, Lesson, MessagesOfDayPayload, TimeGrid, TimetableElement, TimetableElementSelection, TimetableElementType, UntisMessage, UntisMessageDetailPayload, UntisMessagesPayload } from "./types";
 import { normalizeWebUntisServer } from "./schools";
 import { defaultTimetableElement, sortTimetableElements } from "./timetable-elements";
 import { normalizeMessagesOfDay } from "./messages-of-day";
+import { normalizeUntisMessageDetail, normalizeUntisMessages } from "./untis-messages";
 export type LoginInput = { server: string; school: string; username: string; password: string };
 type AuthResult = { sessionId: string; personId: number; personType: number; klasseId?: number; displayName?: string };
 type RpcResponse<T> = { result?: T; error?: { code: number; message: string; data?: unknown } };
@@ -23,7 +24,7 @@ class WebUntisRpcError extends Error {
 }
 function normalizeServer(server: string) { return `https://${normalizeWebUntisServer(server)}`; }
 class WebUntisClient {
-  private sessionId?: string; private requestId = 0;
+  private sessionId?: string; private restToken?: string; private requestId = 0;
   constructor(private input: LoginInput) {}
   private async rpc<T>(method: string, params: unknown = {}) { const url = new URL("/WebUntis/jsonrpc.do", normalizeServer(this.input.server)); url.searchParams.set("school", this.input.school); const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 20000); try { const response = await fetch(url, { method: "POST", redirect: "manual", signal: controller.signal, cache: "no-store", headers: { "content-type": "application/json", "x-requested-with": "XMLHttpRequest", ...(this.sessionId ? { cookie: `JSESSIONID=${this.sessionId}` } : {}) }, body: JSON.stringify({ id: String(++this.requestId), method, params, jsonrpc: "2.0" }) }); const setCookie = response.headers.get("set-cookie"); const cookie = setCookie?.match(/(?:^|[,;]\s*)JSESSIONID=([^;,\s]+)/i)?.[1]; if (cookie) this.sessionId = cookie; if (!response.ok) throw new Error(`WebUntis antwortet mit HTTP ${response.status}.`); const body = await response.json() as RpcResponse<T>; if (body.error) throw new WebUntisRpcError(body.error.code, body.error.message || "WebUntis-Aufruf fehlgeschlagen."); if (body.result === undefined) throw new Error("WebUntis lieferte keine Daten."); return body.result; } finally { clearTimeout(timeout); } }
   async authenticate(): Promise<AuthResult> { const result = await this.rpc<AuthResult>("authenticate", { user: this.input.username, password: this.input.password, client: process.env.WEBUNTIS_CLIENT || "Untiplan" }); this.sessionId = result.sessionId || this.sessionId; return result; }
@@ -60,7 +61,48 @@ class WebUntisClient {
       clearTimeout(timeout);
     }
   }
-  async logout() { try { await this.rpc("logout"); } catch {} }
+  private sessionCookie() {
+    return this.sessionId ? `JSESSIONID=${this.sessionId}; schoolname=${encodeURIComponent(this.input.school)}` : "";
+  }
+  private async token() {
+    if (this.restToken) return this.restToken;
+    const url = new URL("/WebUntis/api/token/new", normalizeServer(this.input.server));
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "manual",
+      cache: "no-store",
+      headers: { accept: "application/json", cookie: this.sessionCookie() },
+    });
+    if (!response.ok) throw new Error(`WebUntis-Zugriffstoken antwortet mit HTTP ${response.status}.`);
+    const token = (await response.text()).trim();
+    if (token.split(".").length !== 3) throw new Error("WebUntis lieferte kein gültiges Zugriffstoken.");
+    this.restToken = token;
+    return token;
+  }
+  private async rest(path: string) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(new URL(path, normalizeServer(this.input.server)), {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        cache: "no-store",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${await this.token()}`,
+          cookie: this.sessionCookie(),
+        },
+      });
+      if (!response.ok) throw new Error(`WebUntis-Mitteilungen antworten mit HTTP ${response.status}.`);
+      return await response.json() as unknown;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  messages(start = 0, pageSize = 100) { return this.rest(`/WebUntis/api/rest/view/v1/messages?pageSize=${pageSize}&start=${start}`); }
+  messageDetail(id: number) { return this.rest(`/WebUntis/api/rest/view/v1/messages/${id}`); }
+  async logout() { try { await this.rpc("logout"); } catch {} finally { this.restToken = undefined; } }
 }
 export async function verifyLogin(input: LoginInput) { const client = new WebUntisClient(input); try { return await client.authenticate(); } finally { await client.logout(); } }
 export async function fetchTimetable(input: LoginInput, person: { personId: number; personType: number }, startDate: number, endDate: number) {
@@ -100,6 +142,40 @@ export async function fetchMessagesOfDay(input: LoginInput, date: number): Promi
     const server = normalizeWebUntisServer(input.server);
     const sourceUrl = `https://${server}/WebUntis/?school=${encodeURIComponent(input.school)}#/basic/main`;
     return { date, messages: normalizeMessagesOfDay(response), sourceUrl };
+  } finally {
+    await client.logout();
+  }
+}
+
+function messagesSourceUrl(input: LoginInput) {
+  return `https://${normalizeWebUntisServer(input.server)}/WebUntis/?school=${encodeURIComponent(input.school)}#/basic/messages`;
+}
+
+export async function fetchUntisMessages(input: LoginInput): Promise<UntisMessagesPayload> {
+  const client = new WebUntisClient(input);
+  await client.authenticate();
+  try {
+    const messages: UntisMessage[] = [];
+    const pageSize = 100;
+    for (let start = 0; start < 1000; start += pageSize) {
+      const page = normalizeUntisMessages(await client.messages(start, pageSize));
+      messages.push(...page);
+      if (page.length < pageSize) break;
+    }
+    const unique = [...new Map(messages.map(message => [message.id, message])).values()];
+    unique.sort((a, b) => b.sentDateTime.localeCompare(a.sentDateTime) || b.id - a.id);
+    return { messages: unique, sourceUrl: messagesSourceUrl(input) };
+  } finally {
+    await client.logout();
+  }
+}
+
+export async function fetchUntisMessageDetail(input: LoginInput, id: number): Promise<UntisMessageDetailPayload> {
+  const client = new WebUntisClient(input);
+  await client.authenticate();
+  try {
+    const fallback: UntisMessage = { id, subject: "(Kein Betreff)", contentPreview: "", senderName: "Unbekannter Absender", sentDateTime: "", isRead: false, hasAttachments: false };
+    return { message: normalizeUntisMessageDetail(await client.messageDetail(id), fallback), sourceUrl: messagesSourceUrl(input) };
   } finally {
     await client.logout();
   }

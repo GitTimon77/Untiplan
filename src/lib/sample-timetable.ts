@@ -1,5 +1,5 @@
 import { deriveCourses } from "./courses";
-import type { Lesson, MessageOfDay, TimetablePayload } from "./types";
+import type { Lesson, MessageOfDay, TimetablePayload, UntisMessage } from "./types";
 
 // All preview records are deliberately synthetic and have no relation to a real school.
 const klasse = [{ id: 101, name: "11A", longname: "Klasse 11A" }];
@@ -32,6 +32,24 @@ export const sampleMessagesOfDay:MessageOfDay[] = [{
   text:"Wichtige Mitteilungen deiner Schule erscheinen hier direkt über deinem Tagesplan.",
   isExpanded:true,
   attachmentCount:0,
+}];
+
+export const sampleUntisMessages:UntisMessage[] = [{
+  id: 901,
+  subject: "Information zum Projekttag",
+  contentPreview: "Am Freitag findet unser schulweiter Projekttag statt. Bitte beachte die Hinweise deiner Klasse.",
+  senderName: "Schulverwaltung",
+  sentDateTime: "2026-01-08T09:15:00",
+  isRead: false,
+  hasAttachments: false,
+}, {
+  id: 900,
+  subject: "Willkommen im Mitteilungs-Posteingang",
+  contentPreview: "Hier erscheinen die persönlichen WebUntis-Mitteilungen – unabhängig von den Nachrichten zum Tag.",
+  senderName: "Untiplan Demo",
+  sentDateTime: "2026-01-07T13:30:00",
+  isRead: true,
+  hasAttachments: false,
 }];
 
 export const sampleTimetable:TimetablePayload = { lessons:sampleLessons,courses:deriveCourses(sampleLessons),holidays:[{id:1,startDate:20260116,endDate:20260116,name:"Projekttag",longName:"Schulweiter Projekttag"},{id:2,startDate:20260119,endDate:20260123,name:"Ferien",longName:"Beispiel-Ferienwoche"}],timeGrid:[1,2,3,4,5].map(day=>({day,timeUnits:[{startTime:800,endTime:845},{startTime:900,endTime:945},{startTime:1000,endTime:1045},{startTime:1100,endTime:1145}]})),schoolYear:"Demo-Schuljahr",range:{startDate:20260112,endDate:20260116} };
