@@ -1,7 +1,8 @@
 import "server-only";
-import type { Holiday, Lesson, TimeGrid, TimetableElement, TimetableElementSelection, TimetableElementType } from "./types";
+import type { Holiday, Lesson, MessagesOfDayPayload, TimeGrid, TimetableElement, TimetableElementSelection, TimetableElementType } from "./types";
 import { normalizeWebUntisServer } from "./schools";
 import { defaultTimetableElement, sortTimetableElements } from "./timetable-elements";
+import { normalizeMessagesOfDay } from "./messages-of-day";
 export type LoginInput = { server: string; school: string; username: string; password: string };
 type AuthResult = { sessionId: string; personId: number; personType: number; klasseId?: number; displayName?: string };
 type RpcResponse<T> = { result?: T; error?: { code: number; message: string; data?: unknown } };
@@ -36,6 +37,29 @@ class WebUntisClient {
   holidays() { return this.rpc<Holiday[]>("getHolidays"); }
   schoolYears() { return this.rpc<SchoolYear[]>("getSchoolyears"); }
   latestImportTime() { return this.rpc<number>("getLatestImportTime"); }
+  async messagesOfDay(date: number) {
+    const url = new URL("/WebUntis/api/public/news/newsWidgetData", normalizeServer(this.input.server));
+    url.searchParams.set("date", String(date));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        cache: "no-store",
+        headers: {
+          accept: "application/json",
+          "x-requested-with": "XMLHttpRequest",
+          ...(this.sessionId ? { cookie: `JSESSIONID=${this.sessionId}` } : {}),
+        },
+      });
+      if (!response.ok) throw new Error(`WebUntis-Nachrichten antworten mit HTTP ${response.status}.`);
+      return await response.json() as unknown;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
   async logout() { try { await this.rpc("logout"); } catch {} }
 }
 export async function verifyLogin(input: LoginInput) { const client = new WebUntisClient(input); try { return await client.authenticate(); } finally { await client.logout(); } }
@@ -63,6 +87,19 @@ export async function fetchTimetable(input: LoginInput, person: { personId: numb
     ]);
     const displaySchoolYear = schoolYear || schoolYearForDate(schoolYears, startDate);
     return { lessons, timeGrid, holidays, ...(displaySchoolYear ? { schoolYear: displaySchoolYear.name } : {}), ...(latestImportTime ? { latestImportTime } : {}) };
+  } finally {
+    await client.logout();
+  }
+}
+
+export async function fetchMessagesOfDay(input: LoginInput, date: number): Promise<MessagesOfDayPayload> {
+  const client = new WebUntisClient(input);
+  await client.authenticate();
+  try {
+    const response = await client.messagesOfDay(date);
+    const server = normalizeWebUntisServer(input.server);
+    const sourceUrl = `https://${server}/WebUntis/?school=${encodeURIComponent(input.school)}#/basic/main`;
+    return { date, messages: normalizeMessagesOfDay(response), sourceUrl };
   } finally {
     await client.logout();
   }

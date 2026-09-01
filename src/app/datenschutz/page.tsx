@@ -18,7 +18,7 @@ export default function DatenschutzPage() {
     <LegalShell
       eyebrow="Deine Daten"
       title="Datenschutzerklärung"
-      intro="Hier erfährst du verständlich, welche Daten Untiplan verarbeitet und warum. Stand: 26. August 2026."
+      intro="Hier erfährst du verständlich, welche Daten Untiplan verarbeitet und warum. Stand: 1. September 2026."
     >
       <section>
         <h2>1. Verantwortlicher</h2>
@@ -60,10 +60,10 @@ export default function DatenschutzPage() {
       </section>
 
       <section>
-        <h2>{legal.useCloudflare ? "5" : "4"}. Anmeldung und Stundenplan</h2>
-        <p>Für die Anmeldung verarbeitet Untiplan den ausgewählten WebUntis-Server, die Schule, deinen Benutzernamen und dein Passwort. Die Daten werden an das WebUntis-System deiner Schule übermittelt, um die Anmeldung zu prüfen und deinen Stundenplan abzurufen. Dabei werden außerdem deine WebUntis-Personenkennung, dein Anzeigename und Stundenplandaten wie Kurse, Lehrkräfte, Räume, Klassen, Zeiten, Vertretungen und Hinweise verarbeitet.</p>
-        <p>Die Zugangsdaten werden auf dem Untiplan-Server mit AES-256-GCM verschlüsselt gespeichert. Der Stundenplan wird bei Bedarf von WebUntis abgerufen und von Untiplan nicht dauerhaft auf dem Server gespeichert. Empfänger der Anmelde- und Abrufdaten ist das ausgewählte WebUntis-System; für dessen Datenverarbeitung gelten zusätzlich die Datenschutzhinweise deiner Schule und von <a href="https://www.untis.at/de/datenschutz" rel="noreferrer">Untis</a>.</p>
-        <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Ohne diese Daten kann Untiplan den ausdrücklich angeforderten Stundenplan nicht bereitstellen.</p>
+        <h2>{legal.useCloudflare ? "5" : "4"}. Anmeldung und WebUntis-Inhalte</h2>
+        <p>Für die Anmeldung verarbeitet Untiplan den ausgewählten WebUntis-Server, die Schule, deinen Benutzernamen und dein Passwort. Die Daten werden an das WebUntis-System deiner Schule übermittelt, um die Anmeldung zu prüfen, deinen Stundenplan und die für dich freigegebenen Nachrichten zum Tag abzurufen. Dabei werden außerdem deine WebUntis-Personenkennung, dein Anzeigename, Stundenplandaten wie Kurse, Lehrkräfte, Räume, Klassen, Zeiten, Vertretungen und Hinweise sowie Betreff, Text und Anzahl möglicher Anhänge der Nachrichten verarbeitet.</p>
+        <p>Die Zugangsdaten werden auf dem Untiplan-Server mit AES-256-GCM verschlüsselt gespeichert. Stundenplan und Nachrichten zum Tag werden bei Bedarf von WebUntis abgerufen und von Untiplan nicht dauerhaft auf dem Server gespeichert. Nachrichteninhalte werden als sicherer Klartext an deinen Browser ausgeliefert; Anhänge selbst werden nicht durch Untiplan übertragen oder gespeichert. Empfänger der Anmelde- und Abrufdaten ist das ausgewählte WebUntis-System; für dessen Datenverarbeitung gelten zusätzlich die Datenschutzhinweise deiner Schule und von <a href="https://www.untis.at/de/datenschutz" rel="noreferrer">Untis</a>.</p>
+        <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Ohne diese Daten kann Untiplan die ausdrücklich angeforderten WebUntis-Inhalte nicht bereitstellen.</p>
       </section>
 
       <section>
@@ -112,7 +112,7 @@ export default function DatenschutzPage() {
 
       <section>
         <h2>{legal.useCloudflare ? "7" : "6"}. Speicherdauer und Löschung</h2>
-        <p>Jede verschlüsselte Kontositzung ist höchstens {legal.sessionDays} Tage nutzbar. Wenn du „Konto entfernen“ und anschließend „Konto und Daten löschen“ auswählst, wird die Sitzung des aktuellen Kontos einschließlich der verschlüsselten Zugangsdaten unmittelbar gelöscht; andere ausdrücklich hinzugefügte Konten bleiben angemeldet. Abgelaufene Sitzungen werden bei der weiteren Sitzungsverwaltung bereinigt. Vorübergehend verarbeitete Stundenplandaten werden nach Beantwortung der jeweiligen Anfrage nicht serverseitig gespeichert. Gesetzliche Aufbewahrungspflichten bleiben unberührt.</p>
+        <p>Jede verschlüsselte Kontositzung ist höchstens {legal.sessionDays} Tage nutzbar. Wenn du „Konto entfernen“ und anschließend „Konto und Daten löschen“ auswählst, wird die Sitzung des aktuellen Kontos einschließlich der verschlüsselten Zugangsdaten unmittelbar gelöscht; andere ausdrücklich hinzugefügte Konten bleiben angemeldet. Abgelaufene Sitzungen werden bei der weiteren Sitzungsverwaltung bereinigt. Vorübergehend verarbeitete Stundenplandaten und Nachrichten zum Tag werden nach Beantwortung der jeweiligen Anfrage nicht serverseitig gespeichert. Gesetzliche Aufbewahrungspflichten bleiben unberührt.</p>
         <p>Eine Anleitung zur Löschung innerhalb der App und über die öffentlich erreichbare Web-Anwendung findest du unter <a href="/daten-loeschen">Daten löschen</a>. Das Entfernen aus Untiplan löscht nicht dein davon unabhängiges WebUntis-Konto; hierfür ist deine Schule beziehungsweise der WebUntis-Betreiber zuständig.</p>
       </section>
 

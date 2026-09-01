@@ -1,5 +1,5 @@
 import { deriveCourses } from "./courses";
-import type { Lesson, TimetablePayload } from "./types";
+import type { Lesson, MessageOfDay, TimetablePayload } from "./types";
 
 // All preview records are deliberately synthetic and have no relation to a real school.
 const klasse = [{ id: 101, name: "11A", longname: "Klasse 11A" }];
@@ -25,5 +25,13 @@ export const sampleLessons:Lesson[] = [
   lesson(9,20260116,900,945,209,"POL","Politik",304,"LEH4","Lehrkraft 4",401,"R-101","Raum 101","11A-POL"),
   lesson(10,20260116,1100,1145,210,"KLA","Klassenstunde",305,"LEH5","Lehrkraft 5",402,"R-102","Raum 102","11A-KLA"),
 ];
+
+export const sampleMessagesOfDay:MessageOfDay[] = [{
+  id:"demo-message",
+  subject:"Willkommen in der Untiplan-Vorschau",
+  text:"Wichtige Mitteilungen deiner Schule erscheinen hier direkt über deinem Tagesplan.",
+  isExpanded:true,
+  attachmentCount:0,
+}];
 
 export const sampleTimetable:TimetablePayload = { lessons:sampleLessons,courses:deriveCourses(sampleLessons),holidays:[{id:1,startDate:20260116,endDate:20260116,name:"Projekttag",longName:"Schulweiter Projekttag"},{id:2,startDate:20260119,endDate:20260123,name:"Ferien",longName:"Beispiel-Ferienwoche"}],timeGrid:[1,2,3,4,5].map(day=>({day,timeUnits:[{startTime:800,endTime:845},{startTime:900,endTime:945},{startTime:1000,endTime:1045},{startTime:1100,endTime:1145}]})),schoolYear:"Demo-Schuljahr",range:{startDate:20260112,endDate:20260116} };

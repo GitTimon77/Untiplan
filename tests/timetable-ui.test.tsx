@@ -46,6 +46,29 @@ test("today overview explains a weekend without lessons",async()=>{
   assert.ok(screen.getByText("Heute ist kein regulärer Unterrichtstag."));cleanup();
 });
 
+test("today overview renders and expands messages of the day",async()=>{
+  const {render,screen,cleanup,user}=await testing();
+  render(<TodayOverview lessons={[]} date={new Date(2026,8,1)} holidays={[]} bounds={{start:480,end:600}} now={new Date(2026,8,1,10)} onSelect={()=>{}} messages={[{id:1,subject:"Schulfest",text:"Beginn um 16 Uhr",isExpanded:false,attachmentCount:1}]} messagesSourceUrl="https://tenant.webuntis.com/WebUntis/"/>);
+  assert.ok(screen.getByRole("heading",{name:"Nachrichten zum Tag"}));
+  const details=screen.getByText("Schulfest").closest("details");
+  assert.equal(details?.open,false);
+  await user.click(screen.getByText("Schulfest"));
+  assert.equal(details?.open,true);
+  assert.ok(screen.getByText("Beginn um 16 Uhr"));
+  assert.equal(screen.getByRole("link",{name:"In WebUntis öffnen"}).getAttribute("href"),"https://tenant.webuntis.com/WebUntis/");
+  cleanup();
+});
+
+test("today messages remain available when the timetable is unavailable",async()=>{
+  const {render,screen,cleanup}=await testing();
+  render(<TodayOverview lessons={[]} date={new Date(2026,8,1)} holidays={[]} bounds={{start:480,end:600}} now={new Date(2026,8,1,10)} onSelect={()=>{}} messages={[{id:1,subject:"Vertretungsinfo",text:"Bitte beachten",isExpanded:false,attachmentCount:0}]} timetableMessage="Der Stundenplan ist derzeit nicht verfügbar."/>);
+  assert.ok(screen.getByRole("heading",{name:"Nachrichten zum Tag"}));
+  assert.ok(screen.getByText("Vertretungsinfo"));
+  assert.ok(screen.getByRole("alert",{name:""}));
+  assert.ok(screen.getByText("Der Stundenplan ist derzeit nicht verfügbar."));
+  cleanup();
+});
+
 test("lesson details keep a long subject name in a single heading",async()=>{
   const {render,screen,cleanup}=await testing();
   const lesson:Lesson={id:8,date:20260112,startTime:800,endTime:845,su:[{id:2,name:"SOWI",longname:"Sozialwissenschaften/Wirtschaft"}]};
