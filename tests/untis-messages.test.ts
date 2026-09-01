@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeUntisMessageDetail, normalizeUntisMessages } from "../src/lib/untis-messages";
-import { fetchUntisMessageDetail, fetchUntisMessages } from "../src/lib/webuntis";
+import { fetchUntisMessageDetail, fetchUntisMessages, UntisMessagesForbiddenError } from "../src/lib/webuntis";
 
 const input = { server: "tenant.webuntis.com", school: "school", username: "user", password: "password" };
 
@@ -60,5 +60,29 @@ test("loads a full message without changing its read state", async () => {
     assert.deepEqual(calls, ["authenticate", "token", "detail", "logout"]);
     assert.equal(result.message.content, "Volltext");
     assert.equal(result.message.isRead, false);
+  } finally { global.fetch = originalFetch; }
+});
+
+test("turns a forbidden inbox into a clear account permission error", async () => {
+  const originalFetch = global.fetch;
+  const calls: string[] = [];
+  global.fetch = async (request, init) => {
+    const url = String(request);
+    if (init?.method === "POST") {
+      const method = JSON.parse(String(init.body)).method;
+      calls.push(method);
+      if (method === "authenticate") return Response.json({ result: { sessionId: "session", personId: 1, personType: 13 } }, { headers: { "set-cookie": "JSESSIONID=session; Path=/" } });
+      return Response.json({ result: true });
+    }
+    if (url.endsWith("/api/token/new")) { calls.push("token"); return new Response("header.payload.signature"); }
+    calls.push("inbox");
+    return Response.json({ errorCode: "FORBIDDEN" }, { status: 403 });
+  };
+  try {
+    await assert.rejects(
+      fetchUntisMessages(input),
+      error => error instanceof UntisMessagesForbiddenError && error.message === "Mitteilungen sind für dieses Konto nicht freigegeben.",
+    );
+    assert.deepEqual(calls, ["authenticate", "token", "inbox", "logout"]);
   } finally { global.fetch = originalFetch; }
 });

@@ -16,6 +16,13 @@ export class TimetableDisplayBlockedError extends Error {
   }
 }
 
+export class UntisMessagesForbiddenError extends Error {
+  constructor() {
+    super("Mitteilungen sind für dieses Konto nicht freigegeben.");
+    this.name = "UntisMessagesForbiddenError";
+  }
+}
+
 class WebUntisRpcError extends Error {
   constructor(readonly code: number, message: string) {
     super(message);
@@ -94,6 +101,7 @@ class WebUntisClient {
           cookie: this.sessionCookie(),
         },
       });
+      if (response.status === 403) throw new UntisMessagesForbiddenError();
       if (!response.ok) throw new Error(`WebUntis-Mitteilungen antworten mit HTTP ${response.status}.`);
       return await response.json() as unknown;
     } finally {

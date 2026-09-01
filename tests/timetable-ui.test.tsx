@@ -84,6 +84,15 @@ test("the WebUntis inbox is searchable and expands independently from daily news
   cleanup();
 });
 
+test("the WebUntis inbox explains when an account has no permission",async()=>{
+  const {render,screen,cleanup}=await testing();
+  render(<MessagesInbox messages={[]} busy={false} error="Mitteilungen sind für dieses Konto nicht freigegeben." sourceUrl="" retry={()=>{}}/>);
+  assert.ok(screen.getByRole("alert"));
+  assert.ok(screen.getByText("Mitteilungen sind für dieses Konto nicht freigegeben."));
+  assert.equal(screen.queryByText("Keine Mitteilungen"),null);
+  cleanup();
+});
+
 test("lesson details keep a long subject name in a single heading",async()=>{
   const {render,screen,cleanup}=await testing();
   const lesson:Lesson={id:8,date:20260112,startTime:800,endTime:845,su:[{id:2,name:"SOWI",longname:"Sozialwissenschaften/Wirtschaft"}]};

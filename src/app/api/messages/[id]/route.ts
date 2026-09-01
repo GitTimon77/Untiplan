@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { errorResponse, SESSION_COOKIE } from "@/lib/http";
 import { getSession } from "@/lib/store";
-import { fetchUntisMessageDetail } from "@/lib/webuntis";
+import { fetchUntisMessageDetail, UntisMessagesForbiddenError } from "@/lib/webuntis";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -14,6 +14,9 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
+    if (error instanceof UntisMessagesForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     return errorResponse(error, "Mitteilung konnte nicht geladen werden.", 502);
   }
 }
