@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { UntisMessage, UntisMessageDetail, UntisMessageDetailPayload } from "@/lib/types";
+import type { UntisMessage, UntisMessageAttachment, UntisMessageDetail, UntisMessageDetailPayload } from "@/lib/types";
 
 type DetailState = { message?: UntisMessageDetail; busy?: boolean; error?: string };
 
@@ -15,6 +15,18 @@ function initial(value: string) {
   return value.trim().charAt(0).toLocaleUpperCase("de") || "?";
 }
 
+function Attachment({ messageId, attachment }: { messageId: number; attachment: UntisMessageAttachment }) {
+  const path = `/api/messages/${messageId}/attachments/${encodeURIComponent(attachment.id)}`;
+  return <article className={`message-attachment ${attachment.kind}`}>
+    <div className="message-attachment-head">
+      <span title={attachment.name}>{attachment.name}</span>
+      <a href={`${path}?download=1`} download={attachment.name}>Herunterladen</a>
+    </div>
+    {attachment.kind === "image" && <img src={path} alt={`Vorschau von ${attachment.name}`} loading="lazy" />}
+    {attachment.kind === "pdf" && <iframe src={path} title={`PDF-Vorschau: ${attachment.name}`} loading="lazy" />}
+  </article>;
+}
+
 export function MessagesInbox({ messages, busy, error, sourceUrl, retry }: { messages: UntisMessage[]; busy: boolean; error: string; sourceUrl: string; retry: () => void }) {
   const [search, setSearch] = useState("");
   const [details, setDetails] = useState<Record<number, DetailState>>({});
@@ -25,7 +37,7 @@ export function MessagesInbox({ messages, busy, error, sourceUrl, retry }: { mes
   async function loadDetail(message: UntisMessage) {
     if (details[message.id]?.message || details[message.id]?.busy) return;
     if (!sourceUrl) {
-      setDetails(current => ({ ...current, [message.id]: { message: { ...message, content: message.contentPreview, attachmentCount: message.hasAttachments ? 1 : 0 } } }));
+      setDetails(current => ({ ...current, [message.id]: { message: { ...message, content: message.contentPreview, attachmentCount: message.hasAttachments ? 1 : 0, attachments: [] } } }));
       return;
     }
     setDetails(current => ({ ...current, [message.id]: { busy: true } }));
@@ -61,7 +73,10 @@ export function MessagesInbox({ messages, busy, error, sourceUrl, retry }: { mes
             {detail?.busy ? <p className="muted">Inhalt wird geladen …</p>
               : detail?.error ? <div className="messages-error compact" role="alert"><span>{detail.error}</span><button onClick={() => { setDetails(current => ({ ...current, [message.id]: {} })); void loadDetail(message); }}>Noch einmal</button></div>
               : <p>{detail?.message?.content || message.contentPreview || "Diese Mitteilung enthält keinen Text."}</p>}
-            {(detail?.message?.attachmentCount || message.hasAttachments) && <div className="message-attachments"><span>{detail?.message?.attachmentCount || 1} {detail?.message?.attachmentCount === 1 ? "Anhang" : "Anhänge"}</span></div>}
+            {(detail?.message?.attachmentCount || message.hasAttachments) && <div className="message-attachments">
+              <span>{detail?.message?.attachmentCount || 1} {detail?.message?.attachmentCount === 1 ? "Anhang" : "Anhänge"}</span>
+              {detail?.message?.attachments.map(attachment => <Attachment key={attachment.id} messageId={message.id} attachment={attachment} />)}
+            </div>}
           </div>
         </details>;
       })}</div>}

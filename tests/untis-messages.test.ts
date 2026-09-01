@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeUntisMessageDetail, normalizeUntisMessages } from "../src/lib/untis-messages";
-import { fetchUntisMessageDetail, fetchUntisMessages, UntisMessagesForbiddenError } from "../src/lib/webuntis";
+import { fetchUntisMessageAttachment, fetchUntisMessageDetail, fetchUntisMessages, UntisMessagesForbiddenError } from "../src/lib/webuntis";
 
 const input = { server: "tenant.webuntis.com", school: "school", username: "user", password: "password" };
 
@@ -11,7 +11,42 @@ test("normalizes the modern WebUntis inbox separately from messages of the day",
 
 test("normalizes a message detail as safe plain text", () => {
   const fallback = normalizeUntisMessages({ incomingMessages: [{ id: 42, subject: "Info", sender: { displayName: "MOR" }, isMessageRead: true }] })[0];
-  assert.deepEqual(normalizeUntisMessageDetail({ id: 42, subject: "Info", content: "<p>Erste Zeile</p><script>bad()</script><p>Zweite Zeile</p>", sender: { displayName: "MOR" }, sentDateTime: "2026-09-01T08:30:00", attachments: [{ id: "one" }], storageAttachments: [{ id: "two" }] }, fallback), { ...fallback, contentPreview: "Erste Zeile\nZweite Zeile", sentDateTime: "2026-09-01T08:30:00", hasAttachments: true, content: "Erste Zeile\nZweite Zeile", attachmentCount: 2 });
+  assert.deepEqual(normalizeUntisMessageDetail({ id: 42, subject: "Info", content: "<p>Erste Zeile</p><script>bad()</script><p>Zweite Zeile</p>", sender: { displayName: "MOR" }, sentDateTime: "2026-09-01T08:30:00", attachments: [{ id: "one", name: "Foto.JPG", downloadUrl: "https://school.sharepoint.com/foto" }], storageAttachments: [{ id: "two", name: "Plan.pdf" }] }, fallback), { ...fallback, contentPreview: "Erste Zeile\nZweite Zeile", sentDateTime: "2026-09-01T08:30:00", hasAttachments: true, content: "Erste Zeile\nZweite Zeile", attachmentCount: 2, attachments: [{ id: "storage:two", name: "Plan.pdf", kind: "pdf" }, { id: "external:one", name: "Foto.JPG", kind: "image" }] });
+});
+
+test("loads a storage attachment through the signed WebUntis URL", async () => {
+  const originalFetch = global.fetch;
+  const calls: string[] = [];
+  global.fetch = async (request, init) => {
+    const url = String(request);
+    if (init?.method === "POST") {
+      const method = JSON.parse(String(init.body)).method;
+      calls.push(method);
+      return Response.json({ result: method === "authenticate" ? { sessionId: "session", personId: 1, personType: 5 } : true }, { headers: { "set-cookie": "JSESSIONID=session; Path=/" } });
+    }
+    if (url.endsWith("/api/token/new")) { calls.push("token"); return new Response("header.payload.signature"); }
+    if (url.endsWith("/api/rest/view/v1/messages/7")) {
+      calls.push("detail");
+      return Response.json({ id: 7, storageAttachments: [{ id: "storage-key", name: "Plan.pdf" }] });
+    }
+    if (url.endsWith("/api/rest/view/v1/messages/storage-key/attachmentstorageurl")) {
+      calls.push("storage-url");
+      return Response.json({ downloadUrl: "https://files.example.com/plan.pdf?X-Amz-Date=20260901T120000Z", additionalHeaders: [{ key: "x-test", value: "signed" }, { key: "host", value: "ignored" }] });
+    }
+    calls.push("file");
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.get("x-test"), "signed");
+    assert.equal(headers.get("x-amz-date"), "20260901T120000Z");
+    assert.equal(headers.has("host"), false);
+    return new Response(new Uint8Array([37, 80, 68, 70]), { headers: { "content-type": "application/octet-stream" } });
+  };
+  try {
+    const result = await fetchUntisMessageAttachment(input, 7, "storage:storage-key");
+    assert.deepEqual(calls, ["authenticate", "token", "detail", "storage-url", "file", "logout"]);
+    assert.equal(result.name, "Plan.pdf");
+    assert.equal(result.contentType, "application/pdf");
+    assert.deepEqual([...new Uint8Array(result.bytes)], [37, 80, 68, 70]);
+  } finally { global.fetch = originalFetch; }
 });
 
 test("loads the inbox with a REST token and always logs out", async () => {
@@ -93,6 +128,7 @@ test("loads a full message without changing its read state", async () => {
     assert.deepEqual(calls, ["authenticate", "token", "detail", "logout"]);
     assert.equal(result.message.content, "Volltext");
     assert.equal(result.message.isRead, false);
+    assert.deepEqual(result.message.attachments, []);
   } finally { global.fetch = originalFetch; }
 });
 

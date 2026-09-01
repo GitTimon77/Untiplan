@@ -1,4 +1,4 @@
-import type { UntisMessage, UntisMessageDetail } from "./types";
+import type { UntisMessage, UntisMessageAttachment, UntisMessageDetail } from "./types";
 import { messagePlainText } from "./messages-of-day";
 
 type UnknownRecord = Record<string, unknown>;
@@ -33,6 +33,58 @@ function attachmentCount(source: UnknownRecord) {
     + (source.blobAttachment ? 1 : 0);
 }
 
+export type NormalizedUntisMessageAttachment = UntisMessageAttachment & {
+  source: "storage" | "blob" | "external";
+  upstreamId?: string;
+  downloadUrl?: string;
+};
+
+function attachmentKind(name: string): UntisMessageAttachment["kind"] {
+  const extension = name.toLocaleLowerCase("de").split(".").pop();
+  if (extension === "pdf") return "pdf";
+  if (["avif", "bmp", "gif", "jpeg", "jpg", "png", "webp"].includes(extension || "")) return "image";
+  return "file";
+}
+
+function attachmentName(source: UnknownRecord, fallback: string) {
+  return text(source.name) || text(source.fileName) || fallback;
+}
+
+export function normalizeUntisMessageAttachments(value: unknown): NormalizedUntisMessageAttachment[] {
+  const source = record(value);
+  if (!source) return [];
+  const attachments: NormalizedUntisMessageAttachment[] = [];
+
+  if (Array.isArray(source.storageAttachments)) {
+    source.storageAttachments.forEach(candidate => {
+      const item = record(candidate);
+      const upstreamId = typeof item?.id === "string" || typeof item?.id === "number" ? String(item.id).trim() : "";
+      if (!item || !upstreamId || upstreamId.length > 240) return;
+      const name = attachmentName(item, "Anhang");
+      attachments.push({ id: `storage:${upstreamId}`, upstreamId, name, kind: attachmentKind(name), source: "storage" });
+    });
+  }
+
+  if (Array.isArray(source.attachments)) {
+    source.attachments.forEach(candidate => {
+      const item = record(candidate);
+      const upstreamId = typeof item?.id === "string" || typeof item?.id === "number" ? String(item.id).trim() : "";
+      const downloadUrl = text(item?.downloadUrl);
+      if (!item || !upstreamId || upstreamId.length > 240 || !downloadUrl) return;
+      const name = attachmentName(item, "Anhang");
+      attachments.push({ id: `external:${upstreamId}`, upstreamId, downloadUrl, name, kind: attachmentKind(name), source: "external" });
+    });
+  }
+
+  const blob = record(source.blobAttachment);
+  if (blob) {
+    const name = attachmentName(blob, "Anhang");
+    attachments.push({ id: "blob", name, kind: attachmentKind(name), source: "blob" });
+  }
+
+  return attachments;
+}
+
 function messageCandidates(value: unknown) {
   const root = record(value);
   const data = record(root?.data);
@@ -64,9 +116,10 @@ export function normalizeUntisMessages(value: unknown): UntisMessage[] {
 
 export function normalizeUntisMessageDetail(value: unknown, fallback: UntisMessage): UntisMessageDetail {
   const source = record(value);
-  if (!source) return { ...fallback, content: fallback.contentPreview, attachmentCount: fallback.hasAttachments ? 1 : 0 };
+  if (!source) return { ...fallback, content: fallback.contentPreview, attachmentCount: fallback.hasAttachments ? 1 : 0, attachments: [] };
   const content = text(source.content) || text(source.body) || fallback.contentPreview;
   const count = attachmentCount(source);
+  const attachments = normalizeUntisMessageAttachments(source).map(({ id, name, kind }) => ({ id, name, kind }));
   const detailSender = senderName(source);
   return {
     id: messageId(source.id) ?? fallback.id,
@@ -78,5 +131,6 @@ export function normalizeUntisMessageDetail(value: unknown, fallback: UntisMessa
     hasAttachments: fallback.hasAttachments || count > 0,
     content,
     attachmentCount: count || (fallback.hasAttachments ? 1 : 0),
+    attachments,
   };
 }

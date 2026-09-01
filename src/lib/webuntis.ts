@@ -3,7 +3,7 @@ import type { Holiday, Lesson, MessagesOfDayPayload, TimeGrid, TimetableElement,
 import { normalizeWebUntisServer } from "./schools";
 import { defaultTimetableElement, sortTimetableElements } from "./timetable-elements";
 import { normalizeMessagesOfDay } from "./messages-of-day";
-import { normalizeUntisMessageDetail, normalizeUntisMessages } from "./untis-messages";
+import { normalizeUntisMessageAttachments, normalizeUntisMessageDetail, normalizeUntisMessages } from "./untis-messages";
 export type LoginInput = { server: string; school: string; username: string; password: string };
 type AuthResult = { sessionId: string; personId: number; personType: number; klasseId?: number; displayName?: string };
 type RpcResponse<T> = { result?: T; error?: { code: number; message: string; data?: unknown } };
@@ -20,6 +20,20 @@ export class UntisMessagesForbiddenError extends Error {
   constructor() {
     super("Mitteilungen sind für dieses Konto nicht freigegeben.");
     this.name = "UntisMessagesForbiddenError";
+  }
+}
+
+export class UntisMessageAttachmentNotFoundError extends Error {
+  constructor() {
+    super("Anhang wurde in dieser Mitteilung nicht gefunden.");
+    this.name = "UntisMessageAttachmentNotFoundError";
+  }
+}
+
+export class UntisMessageAttachmentTooLargeError extends Error {
+  constructor() {
+    super("Der Anhang ist zu groß für die Vorschau.");
+    this.name = "UntisMessageAttachmentTooLargeError";
   }
 }
 
@@ -86,7 +100,7 @@ class WebUntisClient {
     this.restToken = token;
     return token;
   }
-  private async rest(path: string) {
+  private async restResponse(path: string, accept = "application/json") {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
     try {
@@ -96,20 +110,23 @@ class WebUntisClient {
         signal: controller.signal,
         cache: "no-store",
         headers: {
-          accept: "application/json",
+          accept,
           authorization: `Bearer ${await this.token()}`,
           cookie: this.sessionCookie(),
         },
       });
       if (response.status === 403) throw new UntisMessagesForbiddenError();
       if (!response.ok) throw new Error(`WebUntis-Mitteilungen antworten mit HTTP ${response.status}.`);
-      return await response.json() as unknown;
+      return response;
     } finally {
       clearTimeout(timeout);
     }
   }
+  private async rest(path: string) { return await (await this.restResponse(path)).json() as unknown; }
   messages(start = 0, pageSize = 100) { return this.rest(`/WebUntis/api/rest/view/v1/messages?pageSize=${pageSize}&start=${start}`); }
   messageDetail(id: number) { return this.rest(`/WebUntis/api/rest/view/v1/messages/${id}`); }
+  attachmentStorageUrl(storageClientKey: string) { return this.rest(`/WebUntis/api/rest/view/v1/messages/${encodeURIComponent(storageClientKey)}/attachmentstorageurl`); }
+  blobAttachment(messageId: number) { return this.restResponse(`/WebUntis/api/rest/view/v1/messages/${messageId}/attachment`, "*/*"); }
   async logout() { try { await this.rpc("logout"); } catch {} finally { this.restToken = undefined; } }
 }
 export async function verifyLogin(input: LoginInput) { const client = new WebUntisClient(input); try { return await client.authenticate(); } finally { await client.logout(); } }
@@ -184,6 +201,92 @@ export async function fetchUntisMessageDetail(input: LoginInput, id: number): Pr
   try {
     const fallback: UntisMessage = { id, subject: "(Kein Betreff)", contentPreview: "", senderName: "Unbekannter Absender", sentDateTime: "", isRead: false, hasAttachments: false };
     return { message: normalizeUntisMessageDetail(await client.messageDetail(id), fallback), sourceUrl: messagesSourceUrl(input) };
+  } finally {
+    await client.logout();
+  }
+}
+
+type UntisMessageAttachmentFile = { bytes: ArrayBuffer; name: string; contentType: string };
+
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+
+function unknownRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function attachmentContentType(name: string, upstream: string | null) {
+  const extension = name.toLocaleLowerCase("de").split(".").pop();
+  if (extension === "pdf") return "application/pdf";
+  const imageTypes: Record<string, string> = { avif: "image/avif", bmp: "image/bmp", gif: "image/gif", jpeg: "image/jpeg", jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
+  return imageTypes[extension || ""] || (upstream && !upstream.includes("text/html") ? upstream.split(";")[0] : "application/octet-stream");
+}
+
+function safeRemoteAttachmentUrl(value: string, requireMicrosoft = false) {
+  const url = new URL(value);
+  if (url.protocol !== "https:") throw new Error("WebUntis lieferte eine ungültige Anhang-Adresse.");
+  const host = url.hostname.toLocaleLowerCase("en");
+  if (host === "localhost" || host.endsWith(".localhost") || host === "127.0.0.1" || host === "::1" || host.startsWith("10.") || host.startsWith("192.168.") || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
+    throw new Error("WebUntis lieferte eine ungültige Anhang-Adresse.");
+  }
+  if (requireMicrosoft && host !== "1drv.ms" && !host.endsWith(".sharepoint.com") && !host.endsWith(".onedrive.com") && !host.endsWith(".1drv.com")) {
+    throw new Error("Der externe Anhang kann nicht sicher geladen werden.");
+  }
+  return url;
+}
+
+function safeAttachmentHeaders(value: unknown, downloadUrl: URL) {
+  const headers = new Headers();
+  if (Array.isArray(value)) value.forEach(candidate => {
+    const item = unknownRecord(candidate);
+    const key = typeof item?.key === "string" ? item.key.trim() : "";
+    const headerValue = typeof item?.value === "string" ? item.value : "";
+    if (key && headerValue && !["authorization", "cookie", "host", "content-length"].includes(key.toLocaleLowerCase("en"))) headers.set(key, headerValue);
+  });
+  const amzDate = downloadUrl.searchParams.get("X-Amz-Date");
+  if (amzDate) headers.set("X-Amz-Date", amzDate);
+  return headers;
+}
+
+async function attachmentFile(response: Response, name: string): Promise<UntisMessageAttachmentFile> {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_ATTACHMENT_BYTES) throw new UntisMessageAttachmentTooLargeError();
+  const buffer = await response.arrayBuffer();
+  if (buffer.byteLength > MAX_ATTACHMENT_BYTES) throw new UntisMessageAttachmentTooLargeError();
+  return { bytes: buffer, name, contentType: attachmentContentType(name, response.headers.get("content-type")) };
+}
+
+async function remoteAttachment(url: URL, name: string, headers = new Headers()): Promise<UntisMessageAttachmentFile> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(url, { method: "GET", signal: controller.signal, cache: "no-store", redirect: "error", headers });
+    if (!response.ok) throw new Error(`WebUntis-Anhang antwortet mit HTTP ${response.status}.`);
+    return await attachmentFile(response, name);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function fetchUntisMessageAttachment(input: LoginInput, messageId: number, attachmentId: string): Promise<UntisMessageAttachmentFile> {
+  const client = new WebUntisClient(input);
+  await client.authenticate();
+  try {
+    const detail = await client.messageDetail(messageId);
+    const attachment = normalizeUntisMessageAttachments(detail).find(candidate => candidate.id === attachmentId);
+    if (!attachment) throw new UntisMessageAttachmentNotFoundError();
+
+    if (attachment.source === "blob") return await attachmentFile(await client.blobAttachment(messageId), attachment.name);
+    if (attachment.source === "external" && attachment.downloadUrl) {
+      return await remoteAttachment(safeRemoteAttachmentUrl(attachment.downloadUrl, true), attachment.name);
+    }
+    if (attachment.source === "storage" && attachment.upstreamId) {
+      const storage = unknownRecord(await client.attachmentStorageUrl(attachment.upstreamId));
+      const downloadUrlValue = typeof storage?.downloadUrl === "string" ? storage.downloadUrl : "";
+      if (!downloadUrlValue) throw new Error("WebUntis lieferte keine Anhang-Adresse.");
+      const downloadUrl = safeRemoteAttachmentUrl(downloadUrlValue);
+      return await remoteAttachment(downloadUrl, attachment.name, safeAttachmentHeaders(storage?.additionalHeaders, downloadUrl));
+    }
+    throw new UntisMessageAttachmentNotFoundError();
   } finally {
     await client.logout();
   }
