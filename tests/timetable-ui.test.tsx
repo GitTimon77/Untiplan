@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { JSDOM } from "jsdom";
-import { FilterDialog } from "../src/components/dashboard-dialogs";
+import { FilterDialog, LessonDialog } from "../src/components/dashboard-dialogs";
 import { DayColumn, TodayOverview } from "../src/components/timetable-views";
 import type { Lesson } from "../src/lib/types";
 import { Dashboard } from "../src/components/dashboard";
@@ -44,6 +44,14 @@ test("today overview explains a weekend without lessons",async()=>{
   const {render,screen,cleanup}=await testing();
   render(<TodayOverview lessons={[]} date={new Date(2026,0,11)} holidays={[]} bounds={{start:480,end:600}} now={new Date(2026,0,11,10)} onSelect={()=>{}}/>);
   assert.ok(screen.getByText("Heute ist kein regulärer Unterrichtstag."));cleanup();
+});
+
+test("lesson details keep a long subject name in a single heading",async()=>{
+  const {render,screen,cleanup}=await testing();
+  const lesson:Lesson={id:8,date:20260112,startTime:800,endTime:845,su:[{id:2,name:"SOWI",longname:"Sozialwissenschaften/Wirtschaft"}]};
+  render(<LessonDialog lesson={lesson} close={()=>{}}/>);
+  assert.equal(screen.getByRole("heading",{name:"Sozialwissenschaften/Wirtschaft (SOWI)"}).tagName,"H2");
+  cleanup();
 });
 
 test("a display restriction removes old lessons and offline data, then recovers when released",async()=>{

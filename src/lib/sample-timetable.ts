@@ -18,7 +18,7 @@ export const sampleLessons:Lesson[] = [
   { ...lesson(11,20260112,1000,1045,203,"ENG","Englisch",303,"LEH3","Lehrkraft 3",403,"R-103","Raum 103","11A-ENG"), code:"cancelled", substText:"Unterricht entfällt" },
   lesson(3,20260113,800,845,203,"ENG","Englisch",303,"LEH3","Lehrkraft 3",403,"R-103","Raum 103","11A-ENG"),
   { ...lesson(4,20260113,1000,1045,204,"SPO","Sport",304,"LEH4","Lehrkraft 4",404,"HAL-A","Sporthalle A","11A-SPO"), ro:[{id:409,name:"HAL-B",longname:"Sporthalle B",orgid:404,orgname:"Sporthalle A"}], substText:"Hallenwechsel" },
-  lesson(5,20260114,900,945,205,"NAT","Naturwissenschaften",305,"LEH5","Lehrkraft 5",405,"LAB-A","Labor A","Kurs-NAT",gemeinsamerKurs),
+  lesson(5,20260114,900,945,205,"SOWI","Sozialwissenschaften/Wirtschaft",305,"LEH5","Lehrkraft 5",405,"LAB-A","Labor A","Kurs-SOWI",gemeinsamerKurs),
   lesson(6,20260114,1100,1145,206,"GES","Geschichte",301,"LEH1","Lehrkraft 1",406,"R-104","Raum 104","11A-GES"),
   lesson(7,20260115,800,845,207,"KUN","Kunst",302,"LEH2","Lehrkraft 2",407,"KUN-A","Kunstatelier A","11A-KUN"),
   { ...lesson(8,20260115,1000,1045,208,"MUS","Musik",303,"LEH3","Lehrkraft 3",408,"MUS-A","Musikraum A","11A-MUS"), activityType:"Event" },
