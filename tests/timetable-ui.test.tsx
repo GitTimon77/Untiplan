@@ -93,6 +93,13 @@ test("the WebUntis inbox explains when an account has no permission",async()=>{
   cleanup();
 });
 
+test("the WebUntis inbox does not link back to WebUntis",async()=>{
+  const {render,screen,cleanup}=await testing();
+  render(<MessagesInbox messages={[]} busy={false} error="" sourceUrl="https://tenant.webuntis.com/WebUntis/#/basic/messages" retry={()=>{}}/>);
+  assert.equal(screen.queryByRole("link"),null);
+  cleanup();
+});
+
 test("lesson details keep a long subject name in a single heading",async()=>{
   const {render,screen,cleanup}=await testing();
   const lesson:Lesson={id:8,date:20260112,startTime:800,endTime:845,su:[{id:2,name:"SOWI",longname:"Sozialwissenschaften/Wirtschaft"}]};

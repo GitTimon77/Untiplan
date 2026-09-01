@@ -61,10 +61,9 @@ export function MessagesInbox({ messages, busy, error, sourceUrl, retry }: { mes
             {detail?.busy ? <p className="muted">Inhalt wird geladen …</p>
               : detail?.error ? <div className="messages-error compact" role="alert"><span>{detail.error}</span><button onClick={() => { setDetails(current => ({ ...current, [message.id]: {} })); void loadDetail(message); }}>Noch einmal</button></div>
               : <p>{detail?.message?.content || message.contentPreview || "Diese Mitteilung enthält keinen Text."}</p>}
-            {(detail?.message?.attachmentCount || message.hasAttachments) && <div className="message-attachments"><span>{detail?.message?.attachmentCount || 1} {detail?.message?.attachmentCount === 1 ? "Anhang" : "Anhänge"}</span>{sourceUrl && <a href={sourceUrl} target="_blank" rel="noreferrer">In WebUntis öffnen</a>}</div>}
+            {(detail?.message?.attachmentCount || message.hasAttachments) && <div className="message-attachments"><span>{detail?.message?.attachmentCount || 1} {detail?.message?.attachmentCount === 1 ? "Anhang" : "Anhänge"}</span></div>}
           </div>
         </details>;
       })}</div>}
-    {sourceUrl && <a className="messages-source" href={sourceUrl} target="_blank" rel="noreferrer">Posteingang in WebUntis öffnen ↗</a>}
   </section>;
 }
