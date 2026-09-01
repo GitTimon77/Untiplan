@@ -33,12 +33,15 @@ test("options dialog manages focus, toggles offline mode and closes with Escape"
   assert.equal(closed,true);cleanup();
 });
 
-test("timeline exposes a cancellation and opens its details",async()=>{
-  const {render,screen,cleanup,user}=await testing();let selected=0;
+test("timeline exposes a cancellation and opens its details dialog",async()=>{
+  const {render,screen,cleanup,user}=await testing();
   const lesson:Lesson={id:7,date:20260112,startTime:800,endTime:845,code:"cancelled",su:[{id:1,name:"MAT"}]};
-  render(<DayColumn label="Montag" date={new Date(2026,0,12)} lessons={[lesson]} holidays={[]} bounds={{start:480,end:600}} now={new Date(2026,0,12,8,15)} onSelect={value=>{selected=value.id}}/>);
+  function LessonHarness(){const [selected,setSelected]=React.useState<Lesson|null>(null);return <><DayColumn label="Montag" date={new Date(2026,0,12)} lessons={[lesson]} holidays={[]} bounds={{start:480,end:600}} now={new Date(2026,0,12,8,15)} onSelect={setSelected}/>{selected?<LessonDialog lesson={selected} close={()=>setSelected(null)}/>:null}</>}
+  render(<LessonHarness/>);
   await user.click(screen.getByRole("button",{name:/Mathematik|MAT/}));
-  assert.equal(selected,7);assert.match(screen.getByText("Entfällt").textContent||"",/Entfällt/);assert.ok(screen.getByText("Jetzt"));cleanup();
+  assert.ok(screen.getByRole("dialog",{name:"MAT"}));
+  assert.ok(screen.getByText("Unterricht entfällt"));
+  assert.match(screen.getByText("Entfällt").textContent||"",/Entfällt/);assert.ok(screen.getByText("Jetzt"));cleanup();
 });
 
 test("today overview explains a weekend without lessons",async()=>{
@@ -70,17 +73,20 @@ test("today messages remain available when the timetable is unavailable",async()
   cleanup();
 });
 
-test("the WebUntis inbox is searchable and expands independently from daily news",async()=>{
+test("the WebUntis inbox is searchable and expands without affecting daily news",async()=>{
   const {render,screen,cleanup,user}=await testing();
-  render(<MessagesInbox messages={[{id:7,subject:"Schulmusical-Termine",contentPreview:"Ankündigung für nächste Woche",senderName:"Admin_2",sentDateTime:"2026-09-01T09:00:00",isRead:false,hasAttachments:false},{id:8,subject:"Gottesdienst",contentPreview:"Erinnerung",senderName:"MOR",sentDateTime:"2026-08-30T10:00:00",isRead:true,hasAttachments:false}]} busy={false} error="" sourceUrl="" retry={()=>{}}/>);
+  render(<><TodayOverview lessons={[]} date={new Date(2026,8,1)} holidays={[]} bounds={{start:480,end:600}} now={new Date(2026,8,1,10)} onSelect={()=>{}} messages={[{id:1,subject:"Tagesnachricht",text:"Bleibt unabhängig",isExpanded:false,attachmentCount:0}]}/><MessagesInbox messages={[{id:7,subject:"Schulmusical-Termine",contentPreview:"Ankündigung für nächste Woche",senderName:"Admin_2",sentDateTime:"2026-09-01T09:00:00",isRead:false,hasAttachments:false},{id:8,subject:"Gottesdienst",contentPreview:"Erinnerung",senderName:"MOR",sentDateTime:"2026-08-30T10:00:00",isRead:true,hasAttachments:false}]} busy={false} error="" sourceUrl="" retry={()=>{}}/></>);
   assert.ok(screen.getByRole("heading",{name:"Mitteilungen"}));
-  assert.equal(screen.queryByRole("heading",{name:"Nachrichten zum Tag"}),null);
+  assert.ok(screen.getByRole("heading",{name:"Nachrichten zum Tag"}));
+  const dailyNews=screen.getByText("Tagesnachricht").closest("details");
+  assert.equal(dailyNews?.open,false);
   assert.ok(screen.getByLabelText("Ungelesen"));
   await user.type(screen.getByRole("searchbox",{name:"Mitteilungen durchsuchen"}),"Admin");
   assert.ok(screen.getByText("Schulmusical-Termine"));
   assert.equal(screen.queryByText("Gottesdienst"),null);
   await user.click(screen.getByText("Schulmusical-Termine"));
   assert.equal(screen.getAllByText("Ankündigung für nächste Woche").length,2);
+  assert.equal(dailyNews?.open,false);
   cleanup();
 });
 
@@ -100,7 +106,7 @@ test("the WebUntis inbox does not link back to WebUntis",async()=>{
   cleanup();
 });
 
-test("lesson details keep a long subject name in a single heading",async()=>{
+test("lesson details combine the full and abbreviated subject in their heading",async()=>{
   const {render,screen,cleanup}=await testing();
   const lesson:Lesson={id:8,date:20260112,startTime:800,endTime:845,su:[{id:2,name:"SOWI",longname:"Sozialwissenschaften/Wirtschaft"}]};
   render(<LessonDialog lesson={lesson} close={()=>{}}/>);

@@ -39,6 +39,39 @@ test("loads the inbox with a REST token and always logs out", async () => {
   } finally { global.fetch = originalFetch; }
 });
 
+test("paginates, deduplicates and sorts the inbox", async () => {
+  const originalFetch = global.fetch;
+  const calls: string[] = [];
+  const firstPage = Array.from({ length: 100 }, (_, index) => ({
+    id: index + 1,
+    subject: `Mitteilung ${index + 1}`,
+    sender: { displayName: "Admin" },
+    sentDateTime: "2026-09-01T09:00:00",
+  }));
+  global.fetch = async (request, init) => {
+    const url = String(request);
+    if (init?.method === "POST") {
+      const method = JSON.parse(String(init.body)).method as string;
+      calls.push(method);
+      return Response.json({ result: method === "authenticate" ? { sessionId: "session", personId: 1, personType: 5 } : true }, { headers: { "set-cookie": "JSESSIONID=session; Path=/" } });
+    }
+    if (url.endsWith("/api/token/new")) { calls.push("token"); return new Response("header.payload.signature"); }
+    const start = Number(new URL(url).searchParams.get("start"));
+    calls.push(`inbox:${start}`);
+    return Response.json(start === 0 ? { incomingMessages: firstPage } : { incomingMessages: [
+      { ...firstPage[0], subject: "Aktualisierte Mitteilung", sentDateTime: "2026-09-03T09:00:00" },
+      { id: 101, subject: "Neue Mitteilung", sender: { displayName: "Sekretariat" }, sentDateTime: "2026-09-02T09:00:00" },
+    ] });
+  };
+  try {
+    const result = await fetchUntisMessages(input);
+    assert.deepEqual(calls, ["authenticate", "token", "inbox:0", "inbox:100", "logout"]);
+    assert.equal(result.messages.length, 101);
+    assert.deepEqual(result.messages.slice(0, 2).map(message => message.id), [1, 101]);
+    assert.equal(result.messages[0].subject, "Aktualisierte Mitteilung");
+  } finally { global.fetch = originalFetch; }
+});
+
 test("loads a full message without changing its read state", async () => {
   const originalFetch = global.fetch;
   const calls: string[] = [];

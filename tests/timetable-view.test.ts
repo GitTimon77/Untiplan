@@ -20,7 +20,7 @@ test("holidays and changed lessons are selected", () => {
   assert.deepEqual(changedLessons([lesson(1,800,845),lesson(2,900,945,"cancelled")]).map(value => value.id),[2]);
 });
 
-test("demo timetable shows a holiday banner throughout the following week", () => {
+test("the release preview keeps its configured holiday week", () => {
   assert.equal(holidaysForDate(sampleTimetable.holidays,20260119)[0]?.name,"Ferien");
   assert.equal(holidaysForDate(sampleTimetable.holidays,20260123)[0]?.longName,"Beispiel-Ferienwoche");
   assert.equal(holidaysForDate(sampleTimetable.holidays,20260124).length,0);

@@ -13,7 +13,23 @@ const lesson: Lesson = {
   ro: [{ id: 2, name: "R1" }],
 };
 
-test("new timetable changes exclude known signatures", () => {
-  assert.equal(newChanges([changeSignature(lesson)], [lesson]).length, 0);
-  assert.equal(newChanges([], [lesson]).length, 1);
+test("timetable signatures detect updates and exclude known changes", () => {
+  const knownSignature = JSON.stringify([
+    1,
+    20260112,
+    800,
+    845,
+    "cancelled",
+    null,
+    null,
+    null,
+    null,
+    [[2, null]],
+  ]);
+  const movedLesson = { ...lesson, startTime: 900, endTime: 945 };
+
+  assert.equal(changeSignature(lesson), knownSignature);
+  assert.notEqual(changeSignature(movedLesson), knownSignature);
+  assert.deepEqual(newChanges([knownSignature], [lesson]), []);
+  assert.deepEqual(newChanges([knownSignature], [movedLesson]).map(value => value.id), [1]);
 });
