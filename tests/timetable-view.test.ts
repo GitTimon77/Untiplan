@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { changedLessons, holidaysForDate, positionLessons, timetableBounds } from "../src/lib/timetable-view";
+import { sampleTimetable } from "../src/lib/sample-timetable";
 import type { Lesson } from "../src/lib/types";
 
 const lesson = (id:number,startTime:number,endTime:number,code?:string):Lesson => ({ id,date:20260112,startTime,endTime,code });
@@ -17,4 +18,10 @@ test("overlapping lessons are placed in separate columns", () => {
 test("holidays and changed lessons are selected", () => {
   assert.equal(holidaysForDate([{ id:1,startDate:20260112,endDate:20260116,name:"Ferien" }],20260114).length,1);
   assert.deepEqual(changedLessons([lesson(1,800,845),lesson(2,900,945,"cancelled")]).map(value => value.id),[2]);
+});
+
+test("demo timetable shows a holiday banner throughout the following week", () => {
+  assert.equal(holidaysForDate(sampleTimetable.holidays,20260119)[0]?.name,"Ferien");
+  assert.equal(holidaysForDate(sampleTimetable.holidays,20260123)[0]?.longName,"Beispiel-Ferienwoche");
+  assert.equal(holidaysForDate(sampleTimetable.holidays,20260124).length,0);
 });
