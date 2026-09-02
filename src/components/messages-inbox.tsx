@@ -17,6 +17,7 @@ function initial(value: string) {
 }
 
 function Attachment({ messageId, attachment }: { messageId: number; attachment: UntisMessageAttachment }) {
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
   const path = `/api/messages/${messageId}/attachments/${encodeURIComponent(attachment.id)}`;
   return <article className={`message-attachment ${attachment.kind}`}>
     <div className="message-attachment-head">
@@ -24,7 +25,11 @@ function Attachment({ messageId, attachment }: { messageId: number; attachment: 
       <a href={`${path}?download=1`} download={attachment.name}>Herunterladen</a>
     </div>
     {attachment.kind === "image" && <Image src={path} alt={`Vorschau von ${attachment.name}`} width={1200} height={800} unoptimized />}
-    {attachment.kind === "pdf" && <iframe src={path} title={`PDF-Vorschau: ${attachment.name}`} loading="lazy" />}
+    {attachment.kind === "pdf" && !showPdfPreview && <button className="message-attachment-preview" type="button" onClick={() => setShowPdfPreview(true)}>PDF-Vorschau anzeigen</button>}
+    {attachment.kind === "pdf" && showPdfPreview && <>
+      <button className="message-attachment-preview" type="button" onClick={() => setShowPdfPreview(false)}>PDF-Vorschau schließen</button>
+      <iframe src={path} title={`PDF-Vorschau: ${attachment.name}`} loading="lazy" />
+    </>}
   </article>;
 }
 
