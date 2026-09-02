@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import type { UntisMessage, UntisMessageAttachment, UntisMessageDetail, UntisMessageDetailPayload } from "@/lib/types";
 
 type DetailState = { message?: UntisMessageDetail; busy?: boolean; error?: string };
@@ -22,7 +23,7 @@ function Attachment({ messageId, attachment }: { messageId: number; attachment: 
       <span title={attachment.name}>{attachment.name}</span>
       <a href={`${path}?download=1`} download={attachment.name}>Herunterladen</a>
     </div>
-    {attachment.kind === "image" && <img src={path} alt={`Vorschau von ${attachment.name}`} loading="lazy" />}
+    {attachment.kind === "image" && <Image src={path} alt={`Vorschau von ${attachment.name}`} width={1200} height={800} unoptimized />}
     {attachment.kind === "pdf" && <iframe src={path} title={`PDF-Vorschau: ${attachment.name}`} loading="lazy" />}
   </article>;
 }

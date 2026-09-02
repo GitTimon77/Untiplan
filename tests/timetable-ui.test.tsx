@@ -106,6 +106,23 @@ test("the WebUntis inbox does not link back to WebUntis",async()=>{
   cleanup();
 });
 
+test("the WebUntis inbox previews images and PDFs and offers internal downloads",async()=>{
+  const {render,screen,cleanup,user}=await testing();
+  const originalFetch=global.fetch;
+  global.fetch=async()=>Response.json({message:{id:7,subject:"Anhänge",contentPreview:"Material",senderName:"Admin",sentDateTime:"2026-09-01T09:00:00",isRead:true,hasAttachments:true,content:"Bitte ansehen",attachmentCount:2,attachments:[{id:"storage:image",name:"Foto.png",kind:"image"},{id:"storage:pdf",name:"Plan.pdf",kind:"pdf"}]},sourceUrl:"live"});
+  try{
+    render(<MessagesInbox messages={[{id:7,subject:"Anhänge",contentPreview:"Material",senderName:"Admin",sentDateTime:"2026-09-01T09:00:00",isRead:true,hasAttachments:true}]} busy={false} error="" sourceUrl="live" retry={()=>{}}/>);
+    await user.click(screen.getByText("Anhänge"));
+    const image=await screen.findByRole("img",{name:"Vorschau von Foto.png"});
+    const pdf=screen.getByTitle("PDF-Vorschau: Plan.pdf");
+    assert.equal(image.getAttribute("src"),"/api/messages/7/attachments/storage%3Aimage");
+    assert.equal(pdf.getAttribute("src"),"/api/messages/7/attachments/storage%3Apdf");
+    const downloads=screen.getAllByRole("link",{name:"Herunterladen"});
+    assert.deepEqual(downloads.map(link=>link.getAttribute("href")),["/api/messages/7/attachments/storage%3Aimage?download=1","/api/messages/7/attachments/storage%3Apdf?download=1"]);
+    assert.equal(document.body.innerHTML.includes("webuntis.com"),false);
+  }finally{global.fetch=originalFetch;cleanup();}
+});
+
 test("lesson details combine the full and abbreviated subject in their heading",async()=>{
   const {render,screen,cleanup}=await testing();
   const lesson:Lesson={id:8,date:20260112,startTime:800,endTime:845,su:[{id:2,name:"SOWI",longname:"Sozialwissenschaften/Wirtschaft"}]};
