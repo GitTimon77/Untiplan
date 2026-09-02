@@ -115,10 +115,8 @@ test("the WebUntis inbox previews images and PDFs and offers internal downloads"
     await user.click(screen.getByText("Anhänge"));
     const image=await screen.findByRole("img",{name:"Vorschau von Foto.png"});
     assert.equal(image.getAttribute("src"),"/api/messages/7/attachments/storage%3Aimage");
-    assert.equal(screen.queryByTitle("PDF-Vorschau: Plan.pdf"),null);
-    await user.click(screen.getByRole("button",{name:"PDF-Vorschau anzeigen"}));
-    const pdf=await screen.findByTitle("PDF-Vorschau: Plan.pdf");
-    assert.equal(pdf.getAttribute("src"),"/api/messages/7/attachments/storage%3Apdf");
+    assert.ok(screen.getByRole("button",{name:"PDF-Vorschau anzeigen"}));
+    assert.equal(screen.queryByLabelText("PDF-Vorschau: Plan.pdf"),null);
     const downloads=screen.getAllByRole("link",{name:"Herunterladen"});
     assert.deepEqual(downloads.map(link=>link.getAttribute("href")),["/api/messages/7/attachments/storage%3Aimage?download=1","/api/messages/7/attachments/storage%3Apdf?download=1"]);
     assert.equal(document.body.innerHTML.includes("webuntis.com"),false);

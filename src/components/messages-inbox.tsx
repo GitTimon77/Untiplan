@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import type { UntisMessage, UntisMessageAttachment, UntisMessageDetail, UntisMessageDetailPayload } from "@/lib/types";
+import { PdfPreview } from "@/components/pdf-preview";
 
 type DetailState = { message?: UntisMessageDetail; busy?: boolean; error?: string };
 
@@ -28,7 +29,7 @@ function Attachment({ messageId, attachment }: { messageId: number; attachment: 
     {attachment.kind === "pdf" && !showPdfPreview && <button className="message-attachment-preview" type="button" onClick={() => setShowPdfPreview(true)}>PDF-Vorschau anzeigen</button>}
     {attachment.kind === "pdf" && showPdfPreview && <>
       <button className="message-attachment-preview" type="button" onClick={() => setShowPdfPreview(false)}>PDF-Vorschau schließen</button>
-      <iframe src={path} title={`PDF-Vorschau: ${attachment.name}`} loading="lazy" />
+      <PdfPreview url={path} name={attachment.name} />
     </>}
   </article>;
 }
