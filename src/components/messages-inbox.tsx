@@ -60,7 +60,7 @@ export function MessagesInbox({ messages, busy, error, sourceUrl, retry }: { mes
 
   return <section className="messages-inbox" aria-labelledby="messages-heading">
     <div className="messages-inbox-head">
-      <div><p className="eyebrow">WebUntis</p><h2 id="messages-heading">Mitteilungen</h2><p className="muted">Posteingang deiner Schule · getrennt von Nachrichten zum Tag</p></div>
+      <div><p className="eyebrow">WebUntis</p><h2 id="messages-heading">Mitteilungen</h2><p className="muted">dein Posteingang</p></div>
       <div className="messages-count" aria-label={`${messages.length} Mitteilungen, ${unreadCount} ungelesen`}><b>{messages.length}</b><span>{unreadCount ? `${unreadCount} ungelesen` : "alle gelesen"}</span></div>
     </div>
     <label className="messages-search"><span aria-hidden="true">⌕</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Inhalt oder Person suchen" aria-label="Mitteilungen durchsuchen" /></label>
