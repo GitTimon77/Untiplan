@@ -21,13 +21,21 @@ export function deriveCourses(lessons: Lesson[]): Course[] {
       for (const teacher of lesson.te ?? []) {
         const teacherId = teacherIdentity(teacher);
         const key = `${subject.id}-${teacherId}`;
-        if (!map.has(key)) {
+        const subjectAliases = [...new Set([subject.longname, subject.name].filter((value): value is string => Boolean(value)))];
+        const teacherAliases = [...new Set([teacher.orgname, teacher.longname, teacher.name].filter((value): value is string => Boolean(value)))];
+        const existing = map.get(key);
+        if (existing) {
+          existing.subjectAliases = [...new Set([...(existing.subjectAliases ?? []), ...subjectAliases])];
+          existing.teacherAliases = [...new Set([...(existing.teacherAliases ?? []), ...teacherAliases])];
+        } else {
           map.set(key, {
             key,
             subjectId: subject.id,
             teacherId,
             subject: subject.longname || subject.name,
             teacher: teacher.orgname || teacher.longname || teacher.name,
+            subjectAliases,
+            teacherAliases,
           });
         }
       }

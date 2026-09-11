@@ -214,7 +214,9 @@ export async function fetchHomeworks(input: LoginInput, startDate: number, endDa
   const client = new WebUntisClient(input);
   await client.authenticate();
   try {
-    const homeworks = normalizeHomeworks(await client.homeworks(startDate, endDate));
+    const homeworkResponse = await client.homeworks(startDate, endDate);
+    const subjects = await client.subjects().catch(() => []);
+    const homeworks = normalizeHomeworks(homeworkResponse, Array.isArray(subjects) ? subjects : []);
     const server = normalizeWebUntisServer(input.server);
     const sourceUrl = `https://${server}/WebUntis/?school=${encodeURIComponent(input.school)}#/basic/main`;
     return { homeworks, range: { startDate, endDate }, sourceUrl };

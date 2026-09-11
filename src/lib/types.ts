@@ -1,6 +1,6 @@
 export type NamedElement = { id: number; name: string; longname?: string; orgid?: number; orgname?: string };
 export type Lesson = { id: number; date: number; startTime: number; endTime: number; lstype?: string; code?: string; info?: string; substText?: string; lstext?: string; lsnumber?: number; statflags?: string; activityType?: string; sg?: string; bkRemark?: string; bkText?: string; kl?: NamedElement[]; te?: NamedElement[]; su?: NamedElement[]; ro?: NamedElement[] };
-export type Course = { key: string; subjectId: number; teacherId: number; subject: string; teacher: string };
+export type Course = { key: string; subjectId: number; teacherId: number; subject: string; teacher: string; subjectAliases?: string[]; teacherAliases?: string[] };
 export type Holiday = { id: number; startDate: number; endDate: number; name: string; longName?: string };
 export type TimeGrid = { day: number; timeUnits: Array<{ startTime: number; endTime: number }> };
 export type MessageOfDay = { id: number | string; subject: string; text: string; isExpanded: boolean; attachmentCount: number };
@@ -10,7 +10,7 @@ export type UntisMessageAttachment = { id: string; name: string; kind: "image" |
 export type UntisMessageDetail = UntisMessage & { content: string; attachmentCount: number; attachments: UntisMessageAttachment[] };
 export type UntisMessagesPayload = { messages: UntisMessage[]; sourceUrl: string };
 export type UntisMessageDetailPayload = { message: UntisMessageDetail; sourceUrl: string };
-export type Homework = { id: number; lessonId?: number; courseKeys?: string[]; assignedDate: number; dueDate: number; text: string; subject: string; teacher: string; completed: boolean; attachmentCount: number };
+export type Homework = { id: number; lessonId?: number; courseKeys?: string[]; teacherIds?: number[]; assignedDate: number; dueDate: number; text: string; subject: string; teacher: string; completed: boolean; attachmentCount: number };
 export type HomeworksPayload = { homeworks: Homework[]; range: { startDate: number; endDate: number }; sourceUrl: string };
 export type TimetableElementType = 1 | 2 | 3 | 4 | 5;
 export type TimetableElement = { id: number; type: TimetableElementType; name: string; longname?: string };

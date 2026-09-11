@@ -43,7 +43,7 @@ test("loads homework through the authenticated WebUntis session and logs out", a
   };
   try {
     const result = await fetchHomeworks(input, 20260901, 20261001);
-    assert.deepEqual(calls, ["authenticate", "homeworks", "logout"]);
+    assert.deepEqual(calls, ["authenticate", "homeworks", "getSubjects", "logout"]);
     assert.equal(result.homeworks[0].text, "Test");
     assert.deepEqual(result.range, { startDate: 20260901, endDate: 20261001 });
   } finally { global.fetch = originalFetch; }
@@ -77,4 +77,33 @@ test("keeps only homework from the selected courses when the course filter is ac
   assert.deepEqual(homeworks.map(homework => homework.courseKeys), [["10-20"], ["11-29"]]);
   assert.deepEqual(applyHomeworkCourseFilter(homeworks, [], ["11-29"], true).map(homework => homework.id), [2]);
   assert.equal(applyHomeworkCourseFilter(homeworks, [], ["11-29"], false).length, 2);
+});
+
+test("joins the split homework records returned by WebUntis", () => {
+  const homeworks = normalizeHomeworks({ data: {
+    homeworks: [
+      { id: 1, lessonId: 101, date: 20260910, dueDate: 20260914, text: "Aufgabe" },
+      { id: 2, lessonId: 102, date: 20260910, dueDate: 20260915, text: "Andere Aufgabe" },
+    ],
+    lessons: [
+      { id: 101, subject: "Mathematik", lessonType: "Unterricht" },
+      { id: 102, subject: "Deutsch", lessonType: "Unterricht" },
+    ],
+    records: [
+      { homeworkId: 1, teacherId: 20, elementIds: [100] },
+      { homeworkId: 2, teacherId: 30, elementIds: [100] },
+    ],
+    teachers: [
+      { id: 20, name: "Lehrkraft A" },
+      { id: 30, name: "Lehrkraft B" },
+    ],
+  } }, [
+    { id: 10, name: "M", longName: "Mathematik" },
+    { id: 11, name: "D", longName: "Deutsch" },
+  ]);
+
+  assert.deepEqual(homeworks[0].courseKeys, ["10-20"]);
+  assert.deepEqual(homeworks[0].teacherIds, [20]);
+  assert.equal(homeworks[0].teacher, "Lehrkraft A");
+  assert.deepEqual(applyHomeworkCourseFilter(homeworks, [], ["10-20"], true).map(homework => homework.id), [1]);
 });
