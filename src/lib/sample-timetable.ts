@@ -1,5 +1,5 @@
 import { deriveCourses } from "./courses";
-import type { Lesson, MessageOfDay, TimetablePayload, UntisMessage } from "./types";
+import type { Homework, Lesson, MessageOfDay, TimetablePayload, UntisMessage } from "./types";
 
 // All preview records are deliberately synthetic and have no relation to a real school.
 const klasse = [{ id: 101, name: "11A", longname: "Klasse 11A" }];
@@ -50,6 +50,38 @@ export const sampleUntisMessages:UntisMessage[] = [{
   sentDateTime: "2026-01-07T13:30:00",
   isRead: true,
   hasAttachments: false,
+}];
+
+export const sampleHomeworks:Homework[] = [{
+  id: 801,
+  lessonId: 1,
+  assignedDate: 20260112,
+  dueDate: 20260114,
+  text: "Aufgaben 4 bis 7 auf dem Arbeitsblatt bearbeiten.",
+  subject: "Mathematik",
+  teacher: "Lehrkraft 1",
+  completed: false,
+  attachmentCount: 1,
+}, {
+  id: 802,
+  lessonId: 3,
+  assignedDate: 20260113,
+  dueDate: 20260116,
+  text: "Den Text lesen und fünf neue Vokabeln notieren.",
+  subject: "Englisch",
+  teacher: "Lehrkraft 3",
+  completed: false,
+  attachmentCount: 0,
+}, {
+  id: 803,
+  lessonId: 6,
+  assignedDate: 20260109,
+  dueDate: 20260112,
+  text: "Die Quellenanalyse fertigstellen.",
+  subject: "Geschichte",
+  teacher: "Lehrkraft 1",
+  completed: true,
+  attachmentCount: 0,
 }];
 
 export const sampleTimetable:TimetablePayload = { lessons:sampleLessons,courses:deriveCourses(sampleLessons),holidays:[{id:1,startDate:20260116,endDate:20260116,name:"Projekttag",longName:"Schulweiter Projekttag"},{id:2,startDate:20260119,endDate:20260123,name:"Ferien",longName:"Beispiel-Ferienwoche"}],timeGrid:[1,2,3,4,5].map(day=>({day,timeUnits:[{startTime:800,endTime:845},{startTime:900,endTime:945},{startTime:1000,endTime:1045},{startTime:1100,endTime:1145}]})),schoolYear:"Demo-Schuljahr",range:{startDate:20260112,endDate:20260116} };

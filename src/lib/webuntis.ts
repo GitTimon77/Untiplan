@@ -1,9 +1,10 @@
 import "server-only";
-import type { Holiday, Lesson, MessagesOfDayPayload, TimeGrid, TimetableElement, TimetableElementSelection, TimetableElementType, UntisMessage, UntisMessageDetailPayload, UntisMessagesPayload } from "./types";
+import type { Holiday, HomeworksPayload, Lesson, MessagesOfDayPayload, TimeGrid, TimetableElement, TimetableElementSelection, TimetableElementType, UntisMessage, UntisMessageDetailPayload, UntisMessagesPayload } from "./types";
 import { normalizeWebUntisServer } from "./schools";
 import { defaultTimetableElement, sortTimetableElements } from "./timetable-elements";
 import { normalizeMessagesOfDay } from "./messages-of-day";
 import { normalizeUntisMessageAttachments, normalizeUntisMessageDetail, normalizeUntisMessages } from "./untis-messages";
+import { normalizeHomeworks } from "./homeworks";
 export type LoginInput = { server: string; school: string; username: string; password: string };
 type AuthResult = { sessionId: string; personId: number; personType: number; klasseId?: number; displayName?: string };
 type RpcResponse<T> = { result?: T; error?: { code: number; message: string; data?: unknown } };
@@ -20,6 +21,13 @@ export class UntisMessagesForbiddenError extends Error {
   constructor() {
     super("Mitteilungen sind für dieses Konto nicht freigegeben.");
     this.name = "UntisMessagesForbiddenError";
+  }
+}
+
+export class UntisHomeworksForbiddenError extends Error {
+  constructor() {
+    super("Hausaufgaben sind für dieses Konto nicht freigegeben.");
+    this.name = "UntisHomeworksForbiddenError";
   }
 }
 
@@ -83,7 +91,37 @@ class WebUntisClient {
     }
   }
   private sessionCookie() {
-    return this.sessionId ? `JSESSIONID=${this.sessionId}; schoolname=${encodeURIComponent(this.input.school)}` : "";
+    const schoolName = `_${Buffer.from(this.input.school, "utf8").toString("base64")}`;
+    return this.sessionId ? `JSESSIONID=${this.sessionId}; schoolname=${encodeURIComponent(schoolName)}` : "";
+  }
+  async homeworks(startDate: number, endDate: number) {
+    const url = new URL("/WebUntis/api/homeworks/lessons", normalizeServer(this.input.server));
+    url.searchParams.set("startDate", String(startDate));
+    url.searchParams.set("endDate", String(endDate));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        cache: "no-store",
+        headers: {
+          accept: "application/json",
+          "x-requested-with": "XMLHttpRequest",
+          cookie: this.sessionCookie(),
+        },
+      });
+      if (response.status === 401 || response.status === 403) throw new UntisHomeworksForbiddenError();
+      if (!response.ok) throw new Error(`WebUntis-Hausaufgaben antworten mit HTTP ${response.status}.`);
+      const body = await response.json() as unknown;
+      const root = unknownRecord(body);
+      const data = unknownRecord(root?.data) ?? root;
+      if (!Array.isArray(data?.homeworks)) throw new Error("WebUntis lieferte keine Hausaufgabendaten.");
+      return body;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
   private async token() {
     if (this.restToken) return this.restToken;
@@ -167,6 +205,19 @@ export async function fetchMessagesOfDay(input: LoginInput, date: number): Promi
     const server = normalizeWebUntisServer(input.server);
     const sourceUrl = `https://${server}/WebUntis/?school=${encodeURIComponent(input.school)}#/basic/main`;
     return { date, messages: normalizeMessagesOfDay(response), sourceUrl };
+  } finally {
+    await client.logout();
+  }
+}
+
+export async function fetchHomeworks(input: LoginInput, startDate: number, endDate: number): Promise<HomeworksPayload> {
+  const client = new WebUntisClient(input);
+  await client.authenticate();
+  try {
+    const homeworks = normalizeHomeworks(await client.homeworks(startDate, endDate));
+    const server = normalizeWebUntisServer(input.server);
+    const sourceUrl = `https://${server}/WebUntis/?school=${encodeURIComponent(input.school)}#/basic/main`;
+    return { homeworks, range: { startDate, endDate }, sourceUrl };
   } finally {
     await client.logout();
   }

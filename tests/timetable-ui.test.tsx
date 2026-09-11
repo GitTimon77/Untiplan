@@ -10,6 +10,7 @@ import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared
 import { offlineTimetableCacheKey, offlineTimetablePreferenceKey } from "../src/lib/offline-timetable";
 import { timetableViewModeStorageKey } from "../src/lib/local-timetable";
 import { MessagesInbox } from "../src/components/messages-inbox";
+import { HomeworksView } from "../src/components/homeworks-view";
 
 const dom=new JSDOM("<!doctype html><html><body></body></html>",{url:"https://untiplan.test/"});
 const globals=globalThis as unknown as Record<string,unknown>;
@@ -171,4 +172,19 @@ test("a display restriction removes old lessons and offline data, then recovers 
     if(oldLocalStorage)Object.defineProperty(globalThis,"localStorage",oldLocalStorage);
     else Reflect.deleteProperty(globalThis,"localStorage");
   }
+});
+
+test("homework view highlights due dates and filters completed tasks",async()=>{
+  const {render,screen,cleanup,user}=await testing();
+  render(<HomeworksView today={new Date(2026,8,11,12)} busy={false} error="" sourceUrl="https://tenant.webuntis.com/WebUntis/" retry={()=>{}} homeworks={[
+    {id:1,assignedDate:20260908,dueDate:20260910,text:"Kapitel lesen",subject:"Deutsch",teacher:"Frau Beispiel",completed:false,attachmentCount:0},
+    {id:2,assignedDate:20260901,dueDate:20260909,text:"Aufgaben lösen",subject:"Mathematik",teacher:"Herr Beispiel",completed:true,attachmentCount:1},
+  ]}/>);
+  assert.ok(screen.getByText("Seit gestern fällig"));
+  assert.ok(screen.getByText("Kapitel lesen"));
+  await user.click(screen.getByRole("button",{name:"Erledigt"}));
+  assert.ok(screen.getByText("Aufgaben lösen"));
+  assert.equal(screen.queryByText("Kapitel lesen"),null);
+  assert.ok(screen.getByRole("link",{name:"Hausaufgaben in WebUntis öffnen"}));
+  cleanup();
 });

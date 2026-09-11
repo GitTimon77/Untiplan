@@ -25,6 +25,7 @@ Danach ist Untiplan unter `http://localhost:3000` erreichbar.
 - Kennzeichnung von Ausfall, Vertretung, unregelmäßigem Unterricht und Veranstaltungen
 - kompakte Änderungsübersicht sowie optionale lokale Browser-Benachrichtigungen für neu erkannte Änderungen
 - automatische Kursliste aus Fach plus ursprünglicher Lehrkraft
+- Hausaufgaben aus WebUntis mit Fälligkeit, Fach, Lehrkraft, Status, Suche und Filtern
 - mehrere gleichzeitig angemeldete Konten mit direktem Kontowechsel
 - je Konto getrennt im Browser gespeicherte Kursfilter, die erst bei der Abmeldung dieses Kontos gelöscht werden
 - manueller und automatischer Refresh mit Aktualitäts- und Offline-Anzeige
