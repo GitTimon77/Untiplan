@@ -19,7 +19,7 @@ function dueLabel(homework: Homework, today: number) {
   return `Fällig ${formatDate(homework.dueDate)}`;
 }
 
-export function HomeworksView({ homeworks, busy, error, sourceUrl, today, retry }: { homeworks: Homework[]; busy: boolean; error: string; sourceUrl: string; today: Date; retry: () => void }) {
+export function HomeworksView({ homeworks, busy, error, sourceUrl, today, courseFilterActive = false, retry }: { homeworks: Homework[]; busy: boolean; error: string; sourceUrl: string; today: Date; courseFilterActive?: boolean; retry: () => void }) {
   const [filter, setFilter] = useState<HomeworkFilter>("open");
   const [search, setSearch] = useState("");
   const todayNumber = toUntisDate(today);
@@ -47,7 +47,7 @@ export function HomeworksView({ homeworks, busy, error, sourceUrl, today, retry 
     </div>
     {error && <div className="homeworks-error" role="alert"><span>{error}</span><button onClick={retry}>Erneut versuchen</button></div>}
     {busy && !homeworks.length ? <div className="homeworks-state">Hausaufgaben werden geladen …</div>
-      : !homeworks.length && !error ? <div className="homeworks-state"><b>Keine Hausaufgaben</b><span>WebUntis enthält für diesen Zeitraum keine Aufgaben.</span></div>
+      : !homeworks.length && !error ? <div className="homeworks-state"><b>Keine Hausaufgaben</b><span>{courseFilterActive ? "Für deine ausgewählten Kurse gibt es in diesem Zeitraum keine Aufgaben." : "WebUntis enthält für diesen Zeitraum keine Aufgaben."}</span></div>
       : !visibleHomeworks.length ? <div className="homeworks-state"><b>Keine passenden Aufgaben</b><span>Ändere den Filter oder den Suchbegriff.</span></div>
       : <div className="homeworks-list">{visibleHomeworks.map(homework => {
         const overdue = !homework.completed && homework.dueDate < todayNumber;

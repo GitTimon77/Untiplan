@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeHomeworks } from "../src/lib/homeworks";
+import { applyHomeworkCourseFilter, normalizeHomeworks } from "../src/lib/homeworks";
 import { fetchHomeworks, UntisHomeworksForbiddenError } from "../src/lib/webuntis";
 
 const input = { server: "tenant.webuntis.com", school: "Test Schule", username: "user", password: "password" };
@@ -61,4 +61,20 @@ test("turns denied homework access into a clear permission error", async () => {
   try {
     await assert.rejects(fetchHomeworks(input, 20260901, 20261001), error => error instanceof UntisHomeworksForbiddenError);
   } finally { global.fetch = originalFetch; }
+});
+
+test("keeps only homework from the selected courses when the course filter is active", () => {
+  const homeworks = normalizeHomeworks({ data: {
+    homeworks: [
+      { id: 1, lessonId: 101, date: 20260910, dueDate: 20260914, text: "Mathematik" },
+      { id: 2, lessonId: 102, date: 20260910, dueDate: 20260915, text: "Deutsch" },
+    ],
+    lessons: [
+      { id: 101, subjects: [{ id: 10, longName: "Mathematik" }], teachers: [{ id: 20, name: "MAT" }] },
+      { id: 102, subjects: [{ id: 11, longName: "Deutsch" }], teachers: [{ id: 30, orgid: 29, name: "DEU" }] },
+    ],
+  } });
+  assert.deepEqual(homeworks.map(homework => homework.courseKeys), [["10-20"], ["11-29"]]);
+  assert.deepEqual(applyHomeworkCourseFilter(homeworks, [], ["11-29"], true).map(homework => homework.id), [2]);
+  assert.equal(applyHomeworkCourseFilter(homeworks, [], ["11-29"], false).length, 2);
 });

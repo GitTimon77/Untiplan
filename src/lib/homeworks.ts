@@ -1,4 +1,4 @@
-import type { Homework } from "./types";
+import type { Course, Homework } from "./types";
 import { messagePlainText } from "./messages-of-day";
 
 type UnknownRecord = Record<string, unknown>;
@@ -48,6 +48,31 @@ function lessonLabel(lesson: UnknownRecord | undefined, keys: string[]) {
   return "";
 }
 
+function elementIds(value: unknown, original = false) {
+  const candidates = Array.isArray(value) ? value : [value];
+  return candidates.flatMap(candidate => {
+    const source = record(candidate);
+    const id = positiveInteger(original ? source?.orgid ?? source?.orgId ?? source?.id ?? candidate : source?.id ?? candidate);
+    return id ? [id] : [];
+  });
+}
+
+function homeworkCourseKeys(source: UnknownRecord, lesson: UnknownRecord | undefined) {
+  const subjectIds = new Set([
+    ...elementIds(source.subjectId),
+    ...elementIds(lesson?.subject),
+    ...elementIds(lesson?.subjects),
+    ...elementIds(lesson?.su),
+  ]);
+  const teacherIds = new Set([
+    ...elementIds(source.teacherId, true),
+    ...elementIds(lesson?.teacher, true),
+    ...elementIds(lesson?.teachers, true),
+    ...elementIds(lesson?.te, true),
+  ]);
+  return [...subjectIds].flatMap(subjectId => [...teacherIds].map(teacherId => `${subjectId}-${teacherId}`));
+}
+
 function homeworkCandidates(value: unknown) {
   const root = record(value);
   const data = record(root?.data) ?? root;
@@ -81,11 +106,13 @@ export function normalizeHomeworks(value: unknown): Homework[] {
       || "Ohne Fachangabe";
     const teacher = names(source.teacher ?? source.teacherName ?? source.teachers)
       || lessonLabel(lesson, ["teacher", "teachers", "te"]);
+    const courseKeys = homeworkCourseKeys(source, lesson);
     const attachments = Array.isArray(source.attachments) ? source.attachments : [];
     const attachmentCount = Math.max(attachments.length, positiveInteger(source.attachmentCount) ?? 0);
     return [{
       id,
       ...(lessonId ? { lessonId } : {}),
+      ...(courseKeys.length ? { courseKeys } : {}),
       assignedDate: assignedDate || dueDate,
       dueDate,
       text,
@@ -98,4 +125,21 @@ export function normalizeHomeworks(value: unknown): Homework[] {
 
   return [...new Map(normalized.map(homework => [homework.id, homework])).values()]
     .sort((a, b) => Number(a.completed) - Number(b.completed) || a.dueDate - b.dueDate || a.id - b.id);
+}
+
+function normalizedName(value: string) {
+  return value.trim().toLocaleLowerCase("de").replace(/\s+/g, " ");
+}
+
+export function applyHomeworkCourseFilter(homeworks: Homework[], courses: Course[], selected: string[], enabled: boolean) {
+  if (!enabled || selected.length === 0) return homeworks;
+  const allowedKeys = new Set(selected);
+  const allowedCourses = courses.filter(course => allowedKeys.has(course.key));
+  return homeworks.filter(homework => {
+    if (homework.courseKeys?.some(key => allowedKeys.has(key))) return true;
+    const subject = normalizedName(homework.subject);
+    const teacher = normalizedName(homework.teacher);
+    return allowedCourses.some(course => normalizedName(course.subject) === subject
+      && (!teacher || normalizedName(course.teacher) === teacher));
+  });
 }
