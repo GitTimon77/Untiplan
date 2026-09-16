@@ -11,6 +11,26 @@ Der GitHub-Workflow `.github/workflows/mobile-build.yml` läuft bei jedem Push a
 Nach einem erfolgreichen Lauf liegen die Downloads unten auf der Workflow-Seite
 unter **Artifacts**. Sie werden 14 Tage aufbewahrt.
 
+## Dauerhafte Downloads über GitHub Releases
+
+Ein Git-Tag, dessen Name mit `v` beginnt, baut beide Apps und veröffentlicht die
+Ergebnisse zusätzlich dauerhaft unter **GitHub → Releases**. Der Tag muss das
+Format `vHAUPTVERSION.NEBENVERSION.KORREKTUR` verwenden, beispielsweise:
+
+```powershell
+git add .
+git commit -m "Mobile Builds und Releases einrichten"
+git push origin main
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Das Release enthält je nach Signierung `Untiplan.apk` oder
+`Untiplan-test.apk`, optional `Untiplan.aab`, `Untiplan-unsigned.ipa` und eine
+`SHA256SUMS.txt`. Ohne Android-Signierungs-Secrets wird es als **Pre-release**
+gekennzeichnet. Derselbe Tag darf nicht für eine neue Version wiederverwendet
+werden; für die nächste Version beispielsweise `v1.0.1` erstellen.
+
 ## Android
 
 Ohne weitere Konfiguration erzeugt der Workflow `Untiplan-test.apk`. Diese Datei
@@ -68,3 +88,27 @@ Distributions-Workflow aufgenommen werden.
   Sitzungen der Untiplan-Domain bleiben im App-WebView erhalten.
 - Die Android-TWA benötigt für den randlosen, verifizierten Betrieb weiterhin
   korrekte Digital Asset Links für das Zertifikat, mit dem die APK/AAB signiert ist.
+
+## IPA unter Windows auf einem iPhone installieren
+
+Die erzeugte IPA ist kompiliert, aber noch nicht von Apple signiert. Eine
+Installation ist unter Windows beispielsweise mit AltStore Classic möglich:
+
+1. iTunes und iCloud direkt von Apple installieren. AltStore empfiehlt hier die
+   Apple-Downloads und nicht die Microsoft-Store-Ausgaben.
+2. AltServer für Windows installieren und als Administrator starten.
+3. Das entsperrte iPhone per USB verbinden, dem Computer vertrauen und in iTunes
+   die WLAN-Synchronisierung aktivieren.
+4. Über das AltServer-Symbol im Infobereich **Install AltStore** und das iPhone
+   auswählen. Zur Signierung wird ein Apple-Konto benötigt.
+5. Auf dem iPhone unter **Einstellungen → Allgemein → VPN und
+   Geräteverwaltung** dem Entwicklerprofil vertrauen.
+6. Ab iOS 16 unter **Einstellungen → Datenschutz & Sicherheit →
+   Entwicklermodus** den Entwicklermodus einschalten.
+7. `Untiplan-unsigned.ipa` aus dem GitHub Release auf das iPhone laden. In
+   AltStore unter **My Apps** auf **+** tippen und die IPA auswählen. AltServer
+   muss dabei erreichbar sein.
+
+Mit einem kostenlosen Apple-Konto ist die Signatur sieben Tage gültig. AltStore
+versucht, sie im selben WLAN regelmäßig zu erneuern; andernfalls in AltStore
+**Refresh All** verwenden.
