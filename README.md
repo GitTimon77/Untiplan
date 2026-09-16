@@ -1,5 +1,8 @@
 # Untiplan
 
+Automatische Builds für Android und iOS sind in [MOBILE_BUILDS.md](MOBILE_BUILDS.md)
+beschrieben.
+
 Untiplan ist eine eigenständige Next.js-WebApp/PWA für WebUntis. Der Browser spricht ausschließlich mit Untiplan; alle WebUntis-JSON-RPC-Aufrufe und die `JSESSIONID` bleiben auf dem Server.
 
 ## Schnellstart (lokal, 3 Schritte)

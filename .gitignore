@@ -15,3 +15,7 @@ android/app/build/
 android/local.properties
 android/app-release-*.apk
 android/app-release-*.aab
+ios/*.xcodeproj/
+ios/build/
+ios/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+artifacts/

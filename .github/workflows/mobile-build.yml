@@ -1,0 +1,146 @@
+name: Mobile Apps erstellen
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-apps-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android APK erstellen
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_VERSION_CODE: ${{ github.run_number }}
+      APP_VERSION_NAME: 1.0.${{ github.run_number }}
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v6
+
+      - name: Java einrichten
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: APK erstellen
+        working-directory: android
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+
+          if [[ -n "${ANDROID_KEYSTORE_BASE64}${ANDROID_KEYSTORE_PASSWORD}${ANDROID_KEY_ALIAS}${ANDROID_KEY_PASSWORD}" ]] && \
+             [[ -z "$ANDROID_KEYSTORE_BASE64" || \
+                -z "$ANDROID_KEYSTORE_PASSWORD" || \
+                -z "$ANDROID_KEY_ALIAS" || \
+                -z "$ANDROID_KEY_PASSWORD" ]]; then
+            echo "::error::Die Android-Signierung ist nur teilweise konfiguriert. Es werden alle vier Secrets benötigt."
+            exit 1
+          fi
+
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" && \
+                -n "$ANDROID_KEYSTORE_PASSWORD" && \
+                -n "$ANDROID_KEY_ALIAS" && \
+                -n "$ANDROID_KEY_PASSWORD" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/untiplan.keystore"
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/untiplan.keystore"
+            ./gradlew --no-daemon assembleRelease bundleRelease
+
+            mkdir -p ../artifacts/android
+            cp app/build/outputs/apk/release/app-release.apk ../artifacts/android/Untiplan.apk
+            cp app/build/outputs/bundle/release/app-release.aab ../artifacts/android/Untiplan.aab
+            printf 'release\n' > ../artifacts/android/build-type.txt
+          else
+            echo "Keine vollständige Android-Signierung konfiguriert; erstelle eine installierbare Test-APK."
+            ./gradlew --no-daemon assembleDebug
+
+            mkdir -p ../artifacts/android
+            cp app/build/outputs/apk/debug/app-debug.apk ../artifacts/android/Untiplan-test.apk
+            printf 'debug\n' > ../artifacts/android/build-type.txt
+          fi
+
+          cd ../artifacts/android
+          sha256sum -- * > SHA256SUMS.txt
+
+      - name: Android-Artefakte hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: Untiplan-Android-${{ github.run_number }}
+          path: artifacts/android/
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: iOS IPA erstellen
+    runs-on: macos-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v6
+
+      - name: XcodeGen installieren
+        run: brew install xcodegen
+
+      - name: App-Icon vorbereiten
+        working-directory: ios
+        run: |
+          sips \
+            --resampleHeightWidth 1024 1024 \
+            ../public/untiplan-logo.png \
+            --out Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+
+      - name: Xcode-Projekt erzeugen
+        working-directory: ios
+        run: xcodegen generate --spec project.yml
+
+      - name: iOS-App kompilieren
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project Untiplan.xcodeproj \
+            -scheme Untiplan \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CURRENT_PROJECT_VERSION="${GITHUB_RUN_NUMBER}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: IPA verpacken
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          mkdir -p ../artifacts/ios/Payload
+          ditto \
+            build/Build/Products/Release-iphoneos/Untiplan.app \
+            ../artifacts/ios/Payload/Untiplan.app
+          cd ../artifacts/ios
+          zip -qry Untiplan-unsigned.ipa Payload
+          rm -rf Payload
+          shasum -a 256 Untiplan-unsigned.ipa > SHA256SUMS.txt
+
+      - name: iOS-Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: Untiplan-iOS-${{ github.run_number }}
+          path: artifacts/ios/
+          if-no-files-found: error
+          retention-days: 14

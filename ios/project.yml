@@ -1,0 +1,39 @@
+name: Untiplan
+
+options:
+  bundleIdPrefix: dev.timonring
+  deploymentTarget:
+    iOS: "16.0"
+
+settings:
+  base:
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 1.0.0
+    SWIFT_VERSION: 5.0
+
+targets:
+  Untiplan:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    resources:
+      - path: Resources
+    info:
+      path: Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.timonring.untiplan
+        PRODUCT_NAME: Untiplan
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+schemes:
+  Untiplan:
+    build:
+      targets:
+        Untiplan: all
+    run:
+      config: Debug
+    archive:
+      config: Release
