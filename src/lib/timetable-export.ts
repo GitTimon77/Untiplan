@@ -58,12 +58,12 @@ export async function timetablePng(lessons:Lesson[],title:string,options:Timetab
       const laneWidth=columnWidth/columnCount,x=gridLeft+dateIndex*columnWidth+column*laneWidth+5;
       const y=gridTop+(start-bounds.start)*pixelsPerMinute+3,w=laneWidth-10,h=Math.max(48,(end-start)*pixelsPerMinute-6);
       const status=getLessonStatus(lesson);
-      context.fillStyle=status==="cancelled"?"#e5e7eb":status==="substitution"?"#fff7eb":"#ffffff";
-      context.strokeStyle=status==="cancelled"?"#8992a4":status==="substitution"?"#e38b29":status==="irregular"?"#9a62d6":status==="event"?"#1c9a76":"#3457d5";
+      context.fillStyle=status==="cancelled"?"#e5e7eb":lesson.exam?"#f6effd":status==="substitution"?"#fff7eb":"#ffffff";
+      context.strokeStyle=status==="cancelled"?"#8992a4":lesson.exam?"#8a4bd0":status==="substitution"?"#e38b29":status==="irregular"?"#9a62d6":status==="event"?"#1c9a76":"#3457d5";
       context.lineWidth=4;context.beginPath();context.roundRect(x,y,w,h,10);context.fill();context.stroke();
       context.save();context.beginPath();context.rect(x+7,y+5,Math.max(0,w-14),Math.max(0,h-10));context.clip();
       context.fillStyle="#68738a";context.font="600 14px system-ui";context.fillText(`${pad(Math.floor(lesson.startTime/100))}:${pad(lesson.startTime%100)}–${pad(Math.floor(lesson.endTime/100))}:${pad(lesson.endTime%100)}`,x+12,y+21);
-      context.fillStyle="#172033";context.font="700 18px system-ui";context.fillText(ellipsis(context,values(lesson.su)||"Unterricht",w-24),x+12,y+44);
+      context.fillStyle="#172033";context.font="700 18px system-ui";context.fillText(ellipsis(context,`${lesson.exam?"Prüfung · ":""}${values(lesson.su)||"Unterricht"}`,w-24),x+12,y+44);
       if(h>=75){context.fillStyle="#68738a";context.font="500 14px system-ui";context.fillText(ellipsis(context,values(lesson.ro)||"–",w-24),x+12,y+65)}
       context.restore();
     });

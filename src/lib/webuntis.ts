@@ -5,6 +5,7 @@ import { defaultTimetableElement, sortTimetableElements } from "./timetable-elem
 import { normalizeMessagesOfDay } from "./messages-of-day";
 import { normalizeUntisMessageAttachments, normalizeUntisMessageDetail, normalizeUntisMessages } from "./untis-messages";
 import { normalizeHomeworks } from "./homeworks";
+import { attachExamsToLessons, normalizeExams } from "./exams";
 export type LoginInput = { server: string; school: string; username: string; password: string };
 type AuthResult = { sessionId: string; personId: number; personType: number; klasseId?: number; displayName?: string };
 type RpcResponse<T> = { result?: T; error?: { code: number; message: string; data?: unknown } };
@@ -161,6 +162,8 @@ class WebUntisClient {
     }
   }
   private async rest(path: string) { return await (await this.restResponse(path)).json() as unknown; }
+  examsForClass(startDate: string, endDate: string) { return this.rest(`/WebUntis/api/rest/view/v1/exams/for-class?start=${encodeURIComponent(startDate)}&end=${encodeURIComponent(endDate)}`); }
+  examsForStudent(startDate: string, endDate: string) { return this.rest(`/WebUntis/api/rest/view/v1/exams/for-student?start=${encodeURIComponent(startDate)}&end=${encodeURIComponent(endDate)}`); }
   messages(start = 0, pageSize = 100) { return this.rest(`/WebUntis/api/rest/view/v1/messages?pageSize=${pageSize}&start=${start}`); }
   messageDetail(id: number) { return this.rest(`/WebUntis/api/rest/view/v1/messages/${id}`); }
   attachmentStorageUrl(storageClientKey: string) { return this.rest(`/WebUntis/api/rest/view/v1/messages/${encodeURIComponent(storageClientKey)}/attachmentstorageurl`); }
@@ -170,7 +173,7 @@ class WebUntisClient {
 export async function verifyLogin(input: LoginInput) { const client = new WebUntisClient(input); try { return await client.authenticate(); } finally { await client.logout(); } }
 export async function fetchTimetable(input: LoginInput, person: { personId: number; personType: number }, startDate: number, endDate: number) {
   const client = new WebUntisClient(input);
-  await client.authenticate();
+  const authenticatedPerson = await client.authenticate();
   try {
     const schoolYears = await client.schoolYears().catch(() => []);
     const schoolYear = schoolYears.find(value => value.startDate <= endDate && value.endDate >= startDate);
@@ -185,13 +188,27 @@ export async function fetchTimetable(input: LoginInput, person: { personId: numb
           throw error;
         })
       : [];
-    const [timeGrid, holidays, latestImportTime] = await Promise.all([
+    const isoDate = (value: number) => `${Math.floor(value / 10000)}-${String(Math.floor(value % 10000 / 100)).padStart(2,"0")}-${String(value % 100).padStart(2,"0")}`;
+    const examsRequest = !shouldLoadSchoolData
+      ? Promise.resolve([])
+      : authenticatedPerson.personType === 5
+        ? client.examsForStudent(isoDate(startDate), isoDate(endDate))
+        : person.personType === 1
+          ? client.examsForClass(isoDate(startDate), isoDate(endDate))
+          : Promise.resolve([]);
+    const [timeGrid, holidays, latestImportTime, examsResponse] = await Promise.all([
       shouldLoadSchoolData ? client.timeGrid().catch(() => []) : Promise.resolve([]),
       shouldLoadSchoolData ? client.holidays().catch(() => []) : Promise.resolve([]),
       client.latestImportTime().catch(() => undefined),
+      examsRequest.catch(() => []),
     ]);
+    const normalizedExams = normalizeExams(examsResponse);
+    const scopedExams = person.personType === 1
+      ? normalizedExams.filter(exam => !exam.classIds?.length || exam.classIds.includes(person.personId))
+      : normalizedExams;
+    const lessonsWithExams = attachExamsToLessons(lessons, scopedExams);
     const displaySchoolYear = schoolYear || schoolYearForDate(schoolYears, startDate);
-    return { lessons, timeGrid, holidays, ...(displaySchoolYear ? { schoolYear: displaySchoolYear.name } : {}), ...(latestImportTime ? { latestImportTime } : {}) };
+    return { lessons:lessonsWithExams, timeGrid, holidays, ...(displaySchoolYear ? { schoolYear: displaySchoolYear.name } : {}), ...(latestImportTime ? { latestImportTime } : {}) };
   } finally {
     await client.logout();
   }

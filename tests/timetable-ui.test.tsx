@@ -74,6 +74,19 @@ test("today messages remain available when the timetable is unavailable",async()
   cleanup();
 });
 
+test("timeline marks exams and shows their full time in lesson details",async()=>{
+  const {render,screen,cleanup,user}=await testing();
+  const lesson:Lesson={id:9,date:20260925,startTime:910,endTime:1010,su:[{id:2,name:"M L2"}],exam:{id:77,date:20260925,startTime:910,endTime:1245,subject:"M L2",type:"Klausur",text:"Hilfsmittel beachten",teachers:[],rooms:[],classes:["Q1"]}};
+  function ExamHarness(){const [selected,setSelected]=React.useState<Lesson|null>(null);return <><DayColumn label="Freitag" date={new Date(2026,8,25)} lessons={[lesson]} holidays={[]} bounds={{start:540,end:780}} onSelect={setSelected}/>{selected?<LessonDialog lesson={selected} close={()=>setSelected(null)}/>:null}</>}
+  render(<ExamHarness/>);
+  assert.equal(screen.getAllByText("Prüfung").length,2);
+  await user.click(screen.getByRole("button",{name:/M L2/}));
+  assert.ok(screen.getByText("09:10–12:45 Uhr"));
+  assert.ok(screen.getByText("Klausur"));
+  assert.ok(screen.getByText("Hilfsmittel beachten"));
+  cleanup();
+});
+
 test("the WebUntis inbox is searchable and expands without affecting daily news",async()=>{
   const {render,screen,cleanup,user}=await testing();
   render(<><TodayOverview lessons={[]} date={new Date(2026,8,1)} holidays={[]} bounds={{start:480,end:600}} now={new Date(2026,8,1,10)} onSelect={()=>{}} messages={[{id:1,subject:"Tagesnachricht",text:"Bleibt unabhängig",isExpanded:false,attachmentCount:0}]}/><MessagesInbox messages={[{id:7,subject:"Schulmusical-Termine",contentPreview:"Ankündigung für nächste Woche",senderName:"Admin_2",sentDateTime:"2026-09-01T09:00:00",isRead:false,hasAttachments:false},{id:8,subject:"Gottesdienst",contentPreview:"Erinnerung",senderName:"MOR",sentDateTime:"2026-08-30T10:00:00",isRead:true,hasAttachments:false}]} busy={false} error="" sourceUrl="" retry={()=>{}}/></>);
